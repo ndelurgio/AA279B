@@ -9,7 +9,7 @@
 setup_constants;
 
 %% CONFIGURABLE PARAMETERS
-t1_mars_departure = dateToJD('2033-01-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
+t1_mars_departure = date2JD('2033-01-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
 
 % Times of launch and transfer times
 tl_int = 1/3; % time interval to step through [days]
@@ -141,34 +141,4 @@ ha = annotation('textbox',annpos,'string',annstr,'Interpreter','latex');
 ha.HorizontalAlignment = 'left';
 ha.BackgroundColor = [1 1 1];
 
-
-
-
-%% Helper functions
-function jd = dateToJD(datestring)
-% Inputs:
-%   datestring - date in UTC
-% Outputs:
-%   jd - Julian date in days
-    D = datetime(datestring);
-    jd = juliandate(D);
-end
-
-
-function visualize_heliocentric_3d()
-% Visualizes a body of specified radius
-% Outputs: Plot of body
-    
-    scatter3(0,0,0,72,[227,193,2]/255,'filled','o')
-    hold on; grid on; %axis equal;
-    title('Heliocentric Inertial Frame')
-    xlabel('X');
-    ylabel('Y');
-    zlabel('Z')
-    view(3);
-end
-
-function s = days2sec(d)
-    s = d*24*3600;
-end
 
