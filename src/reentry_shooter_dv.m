@@ -1,4 +1,4 @@
-function [vel_ti,t_duration,iter] = reentry_shooter(vel_ti,t_duration,pos_ti,pos_tf,ti,tf,capsule,mu_earth)
+function [vel_ti,t_duration,iter] = reentry_shooter_dv(vel_ti,t_duration,pos_ti,pos_tf,ti,tf,capsule,mu_earth)
 space_weather_data = aeroReadSpaceWeatherData('scenarios/data/SW-Last5Years.csv');
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 time_step = 1;
