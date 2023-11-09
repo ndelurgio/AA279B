@@ -1,14 +1,4 @@
-% MARS TO EARTH INTERPLANETARY TRAJECTORY DESIGN
-% 1. Mars position to Earth position conic
-% - Functions that get positions of each and find a Hohmann-like low energy
-% transfer
-% - Use the incoming velocity to Earth to inform the Earth re-entry part
-% Then we'll end up with 2 patched trajectories and how to map?
-% We can try to fix time (roughly) for each mission segment?
-% Might be working backwards from the landing site, depending on how we
-% patch it
-
-% Obtain position of planet based on time
+% MARS TO EARTH INTERPLANETARY PATCHED CONIC
 
 % Requires: Aerospace Toolbox, aeroDataPackage
 
@@ -18,7 +8,6 @@ setup_constants;
 %% CONFIGURABLE PARAMETERS
 
 % Mars 2020: C3 14.49 km^2/s^2, tof 213 days (https://www.jpl.nasa.gov/news/press_kits/mars_2020/launch/mission/)
-
 
 t1_mars_departure = dateToJD('2020-07-30 04:50'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
 t2_earth_arrival = dateToJD('2021-02-18 00:00');  %'2033-08-01 00:00'); %'2021-02-18 00:00');

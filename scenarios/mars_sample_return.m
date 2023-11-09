@@ -19,7 +19,7 @@ mu_earth = 3.986004415E14;
 dt_sec = 1;
 
 % Space Weather
-space_weather_data = aeroReadSpaceWeatherData('scenarios/data/SW-Last5Years.csv');
+space_weather_data = aeroReadSpaceWeatherData("scenarios/data/SW-Last5Years.csv");
 
 % Capsule Config
 capsule = struct();
