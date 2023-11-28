@@ -5,21 +5,21 @@
 % Requires: Aerospace Toolbox, aeroDataPackage
 
 %% Setup
-setup_constants;
+% setup_constants;
 
 %% CONFIGURABLE PARAMETERS
 
-start_body = 'Earth';
-target_body = 'Mars';
-t1_mars_departure = date2JD('2020-07-30 04:50'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
-t2_earth_arrival = date2JD('2021-02-18 00:00');  %'2033-08-01 00:00'); %'2021-02-18 00:00');
+start_body = 'Mars';
+target_body = 'Earth';
+t1_mars_departure = date2JD('2033-01-14 00:00:00'); %'2020-07-30 04:50'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
+t2_earth_arrival = date2JD('2033-08-20'); %'2021-02-18 00:00');  %'2033-08-01 00:00'); %'2021-02-18 00:00');
 % Mars 2020: C3 14.49 km^2/s^2, tof 213 days (https://www.jpl.nasa.gov/news/press_kits/mars_2020/launch/mission/)
 
 %% LAMBERT SOLVER
 
 dt_sec = timeOfFlight(t1_mars_departure,t2_earth_arrival); % Time of transfer
-[r1_mars_hci,v1_mars_hci] = planetEphemeris(t1_mars_departure,'Sun',start_body); % start position
-[r2_earth_hci,v2_earth_hci] = planetEphemeris(t2_earth_arrival,'Sun',target_body); % end position
+[r1_mars_hci,v1_mars_hci] = planet_ephemeris_hci(t1_mars_departure,start_body); % start position
+[r2_earth_hci,v2_earth_hci] = planet_ephemeris_hci(t2_earth_arrival,target_body); % end position
 
 nrev = 0; % number of revolutions in trajectory
 [v1_dep,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,dt_sec);
@@ -33,8 +33,8 @@ ic = [r1_mars_hci,v1_dep];
 % Simulation settings
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 n_steps = 1000;
-
-[t,traj] = ode113(@fode,linspace(0,dt_sec,n_steps),ic,options,mu_Sun);
+tspan = linspace(0,dt_sec,n_steps);
+[t,traj] = ode113(@fode,tspan,ic,options,mu_Sun);
 
 %% Trajectory visualization
 earth_blue = [11,98,212]/255;
@@ -59,12 +59,3 @@ ha = annotation('textbox',annpos,'string',annstr,'Interpreter','latex');
 ha.HorizontalAlignment = 'left';
 ha.BackgroundColor = [1 1 1];
 
-
-
-
-%% Helper functions
-
-% function tf = timeOfFlight(jd1,jd2)
-% % Return time of flight in seconds between 2 Julian dates, converting days to seconds 
-%     tf = (jd2-jd1)*24*3600;
-% end

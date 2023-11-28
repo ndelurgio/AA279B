@@ -9,15 +9,15 @@
 setup_constants;
 
 %% CONFIGURABLE PARAMETERS
-t1_mars_departure = date2JD('2033-01-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
+t1_mars_departure = date2JD('2032-12-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
 
 % Times of launch and transfer times
-tl_int = 1; % time interval to step through [days]
-tl_max = 112; % maximum launch delay [days]
+tl_int = 1/3; % time interval to step through [days]
+tl_max = 119; % maximum launch delay [days]
 tl_range = (0:tl_int:tl_max) + t1_mars_departure; % absolute time in days
 verify_tl = datetime(tl_range,'ConvertFrom','juliandate');
 
-tf_int = 1; % time interval to step through [days]
+tf_int = 1/3; % time interval to step through [days]
 tf_min = 178; % minimum duration of transfer time [days]
 tf_max = 13*30; % maximum duration of transfer time [days]
 tf_range = (tf_min:tf_int:tf_max) + t1_mars_departure; % [days]
@@ -27,19 +27,19 @@ verify_tf = datetime(tf_range,'ConvertFrom','juliandate');
 %% Explore design space using Lambert solver
 num_cases = length(tl_range)*length(tf_range); % matrix grid of possible launch/transfer time combinations
 dVs = NaN*ones(length(tl_range),length(tf_range)); % indices match that of tl_range by tf_range
-[r1_mars_hc,v1_mars_hc] = planetEphemeris(tl_range','Sun','Mars');
-[r2_earth_hc,v2_earth_hc] = planetEphemeris(tf_range','Sun','Earth');
+% Pre-compute planet ephermides
+[r1_mars_hc,v1_mars_hc] = planet_ephemeris_hci(tl_range','Mars');
+[r2_earth_hc,v2_earth_hc] = planet_ephemeris_hci(tf_range','Earth');
+
 tic
 for i=1:length(tl_range)
-    % Launch delay [days]
-    % launch_delay = tl_range(i);
     % Absolute time of launch
-    % t1_depart = t1_mars_departure + launch_delay; % [days]
     t1_depart = tl_range(i);
+
     % Initial position of Mars at launch time
-    % [r1_mars_hci,v1_mars_hci] = planetEphemeris(t1_depart,'Sun','Mars');
     r1_mars_hci = r1_mars_hc(i,:);
     v1_mars_hci = v1_mars_hc(i,:);
+
     for j=1:length(tf_range)
         % Transfer time [days]
         % dt_days = tf_range(j);
@@ -51,7 +51,6 @@ for i=1:length(tl_range)
         % tof = days2sec(dt_days);
         tof = seconds(days(dt_days));
         % Final position of Earth at arrival time
-        % [r2_earth_hci,~] = planetEphemeris(t2_arrival,'Sun','Earth');
         r2_earth_hci = r2_earth_hc(j,:);
 
         % Lambert solver
@@ -93,7 +92,7 @@ a = tf_range(1:round(length(tf_range)/length(yt)):end);
 b = datetime(a,'ConvertFrom','juliandate','Format','MMM-dd-yyy');
 yticklabels(string(b));
 
-
+grid on
 
 %% Plot 3D trajectory for minimum v_inf path
 
@@ -103,8 +102,8 @@ tl = tl_range(i_min);
 tf = tf_range(j_min);
 
 dt_sec = (tf-tl)*24*3600;
-[r1_mars_hci,v1_mars_hci] = planetEphemeris(tl,'Sun','Mars');
-[r2_earth_hci,v2_earth_hci] = planetEphemeris(tf,'Sun','Earth'); % arrival
+[r1_mars_hci,v1_mars_hci] = planet_ephemeris_hci(tl,'Mars');
+[r2_earth_hci,v2_earth_hci] = planet_ephemeris_hci(tf,'Earth'); % arrival
 
 nrev = 0; % number of revolutions / phasing
 [v1_dep,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,dt_sec);

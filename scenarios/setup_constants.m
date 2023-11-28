@@ -13,4 +13,4 @@ ti_utc = datetime(2028, 1, 1, 1, 1, 1); % time at start of Earth re-entry
 
 %% Constants
 mu_Sun = 1.3271244004193938*10^11; % [km^3/s^2]
-
+mu_Earth = 398600.4418; % [km^3/s^2]

@@ -16,6 +16,6 @@ function [r,v] = planet_ephemeris_hci(jd,planet)
     T_eci2hci = [1 0 0;
                  0 cos(theta) sin(theta);
                  0 -sin(theta) cos(theta)];
-    r = (T_eci2hci*r_eq');
-    v = (T_eci2hci*v_eq');
+    r = (T_eci2hci*r_eq')';
+    v = (T_eci2hci*v_eq')';
 end
