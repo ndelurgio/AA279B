@@ -1,10 +1,11 @@
 function [t_traj,traj] = fast_drag_sim(t_duration,pos_ti,vel_ti,mu_earth,capsule,ti_utc,space_weather_data,options)
 dt = 6;
-r_thresh = 1000e3;
+r_thresh = 1000e3 + 6378e3;
 [a,ecc,incl,RAAN,argp,nu,~,~,~] = rv2orb(pos_ti', vel_ti', mu_earth);
 nu_thresh = acos((a*(1-ecc^2)/r_thresh - 1)/ecc);
-M_thresh = nu2M_hyp(nu_thresh,ecc);
 M_init = nu2M_hyp(nu,ecc);
+nu_thresh = nu_thresh * sign(M_init);
+M_thresh = nu2M_hyp(nu_thresh,ecc);
 n = sqrt(mu_earth/abs(a)^3);
 t_thresh = (M_thresh - M_init)/n;
 % Fast kepler sim
@@ -17,11 +18,12 @@ for i = 1:length(t_traj)
     traj(i,:) = [r;v]'*1000;
 end
 % Drag-perturbed sim
+tspan = t_thresh:dt:t_duration;
 [t_traj_drag,traj_drag] = ode113(...
     @fode_drag,...
-    t_thresh:dt:t_duration,...
-    [pos_ti,vel_ti],...
+    linspace(t_thresh,t_duration,length(tspan)),...
+    traj(end,:),...
     options,mu_earth,capsule,ti_utc + seconds(t_thresh),space_weather_data);
-t_traj = [t_traj, t_traj_drag];
+t_traj = [t_traj'; t_traj_drag];
 traj = [traj;traj_drag];
 end
