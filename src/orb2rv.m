@@ -63,16 +63,16 @@ function [r,v] = orb2rv(p,e,i,O,o,nu,truLon,argLat,lonPer,mu)
 if ~exist('mu','var');  mu = 398600.4418; end
 %Make all inputs consistent w/ dimensions
 p = p(:); e = e(:); i = i(:); O = O(:); o = o(:); nu = nu(:);
-if exist('truLon','var')
-truLon = truLon(:); argLat = argLat(:); lonPer = lonPer(:);
-end
-ietol = 1e-8;
-idx = e < ietol & mod(i,pi) < ietol;
-if any(idx); o(idx) = 0; O(idx) = 0; nu(idx) = truLon(idx); end
-idx = e < ietol & mod(i,pi) > ietol;
-if any(idx); o(idx) = 0; nu(idx) = argLat(idx); end
-idx = e > ietol & mod(i,pi) < ietol;
-if any(idx); O(idx) = 0; o(idx) = lonPer(idx); end
+% if exist('truLon','var')
+% truLon = truLon(:); argLat = argLat(:); lonPer = lonPer(:);
+% end
+% ietol = 1e-8;
+% idx = e < ietol & mod(i,pi) < ietol;
+% if any(idx); o(idx) = 0; O(idx) = 0; nu(idx) = truLon(idx); end
+% idx = e < ietol & mod(i,pi) > ietol;
+% if any(idx); o(idx) = 0; nu(idx) = argLat(idx); end
+% idx = e > ietol & mod(i,pi) < ietol;
+% if any(idx); O(idx) = 0; o(idx) = lonPer(idx); end
 %Find rPQW and vPQW
 rPQW = cat(2,p.*cos(nu)./(1 +e.*cos(nu)),p.*sin(nu)./(1+e.*cos(nu)),zeros(size(nu)));
 vPQW = cat(2,-sqrt(mu./p).*sin(nu),sqrt(mu./p).*(e+cos(nu)),zeros(size(nu)));
