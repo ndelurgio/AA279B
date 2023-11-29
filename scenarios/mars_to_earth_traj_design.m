@@ -11,25 +11,26 @@ setup_constants;
 %% CONFIGURABLE PARAMETERS
 t1_mars_departure = date2JD('2032-11-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
 
-% Times of launch and transfer times
+% Times of launch
 tl_int = 1/3; % time interval to step through [days]
 tl_max = 179; % maximum launch delay [days]
 tl_range = (0:tl_int:tl_max) + t1_mars_departure; % absolute time in days
 verify_tl = datetime(tl_range,'ConvertFrom','juliandate');
 
+% Times of arrival
 tf_int = 1/3; % time interval to step through [days]
-tf_min = 178; % minimum duration of transfer time [days]
+ta_min = 178; % minimum duration of transfer time [days]
 tf_max = 15*30; % maximum duration of transfer time [days]
-tf_range = (tf_min:tf_int:tf_max) + t1_mars_departure; % [days]
-verify_tf = datetime(tf_range,'ConvertFrom','juliandate');
+ta_range = (ta_min:tf_int:tf_max) + t1_mars_departure; % [days]
+verify_ta = datetime(ta_range,'ConvertFrom','juliandate');
 
 
 %% Explore design space using Lambert solver
-num_cases = length(tl_range)*length(tf_range); % matrix grid of possible launch/transfer time combinations
-dVs = NaN*ones(length(tl_range),length(tf_range)); % indices match that of tl_range by tf_range
+num_cases = length(tl_range)*length(ta_range); % matrix grid of possible launch/transfer time combinations
+dVs = NaN*ones(length(tl_range),length(ta_range)); % indices match that of tl_range by tf_range
 % Pre-compute planet ephermides
 [r1_mars_hc,v1_mars_hc] = planet_ephemeris_hci(tl_range','Mars');
-[r2_earth_hc,v2_earth_hc] = planet_ephemeris_hci(tf_range','Earth');
+[r2_earth_hc,v2_earth_hc] = planet_ephemeris_hci(ta_range','Earth');
 
 tic
 for i=1:length(tl_range)
@@ -40,15 +41,10 @@ for i=1:length(tl_range)
     r1_mars_hci = r1_mars_hc(i,:);
     v1_mars_hci = v1_mars_hc(i,:);
 
-    for j=1:length(tf_range)
-        % Transfer time [days]
-        % dt_days = tf_range(j);
-
+    for j=1:length(ta_range)
         % Absolute time of arrival
-        %t2_arrival = t1_depart + dt_days; % [days]
-        t2_arrival = tf_range(j);
+        t2_arrival = ta_range(j);
         dt_days = t2_arrival - t1_depart;
-        % tof = days2sec(dt_days);
         tof = seconds(days(dt_days));
         % Final position of Earth at arrival time
         r2_earth_hci = r2_earth_hc(j,:);
@@ -68,18 +64,18 @@ toc
 %% Porkchop plots for interplanetary transfer
 
 figure('Name','Porkchop plot')
-[x,y] = meshgrid(tl_range,tf_range);
+[x,y] = meshgrid(tl_range,ta_range);
 c3s = (dVs.^2).';
-c3_lvls = 1:1:16;
+c3_lvls = 0:2:20;
 %contour(x,y,c3s,c3_lvls)
-[c_cont,h_cont] = contour(x,y,c3s,c3_lvls,'ShowText',true);
-clabel(c_cont,h_cont,2:2:16);
+[c_cont,h_cont] = contourf(x,y,c3s,c3_lvls,'ShowText',true,"FaceAlpha",0.3);
+clabel(c_cont,h_cont,2:2:20);
 title('Mars to Earth')
 xlabel('Mars departure date (UTC)')
 ylabel('Earth arrival date (UTC)')
-col = colorbar;
-col.Label.String = 'C3 (km$^2$/s$^2$)'; col.Label.Interpreter = 'latex';
-set(col, 'TickLabelInterpreter', 'latex');
+% col = colorbar;
+% col.Label.String = 'C3 (km$^2$/s$^2$)'; col.Label.Interpreter = 'latex';
+% set(col, 'TickLabelInterpreter', 'latex');
 
 % Set tick labels as dates
 xt = xticks;
@@ -96,12 +92,12 @@ grid on
 
 min_vinf = min(min(dVs));
 [i_min,j_min] = find(dVs==min_vinf);
-tl = tl_range(i_min);
-tf = tf_range(j_min);
+tl_min = tl_range(i_min);
+ta_min = ta_range(j_min);
 
-dt_sec = (tf-tl)*24*3600;
-[r1_mars_hci,v1_mars_hci] = planet_ephemeris_hci(tl,'Mars');
-[r2_earth_hci,v2_earth_hci] = planet_ephemeris_hci(tf,'Earth'); % arrival
+dt_sec = (ta_min-tl_min)*24*3600;
+[r1_mars_hci,v1_mars_hci] = planet_ephemeris_hci(tl_min,'Mars');
+[r2_earth_hci,v2_earth_hci] = planet_ephemeris_hci(ta_min,'Earth'); % arrival
 
 nrev = 0; % number of revolutions / phasing
 [v1_dep,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,dt_sec);
@@ -119,7 +115,7 @@ tspan = linspace(0,dt_sec,n_steps);
 [t,traj] = ode113(@fode,tspan,ic,options,mu_Sun);
 
 % Earth and Mars positions
-tspan_d = linspace(tl,tf,n_steps);
+tspan_d = linspace(tl_min,ta_min,n_steps);
 r_mars = planet_ephemeris_hci(tspan_d','Mars');
 r_earth = planet_ephemeris_hci(tspan_d','Earth');
 
@@ -135,17 +131,24 @@ plot3(r_mars(:,1),r_mars(:,2),r_mars(:,3),'Color',mars_red)
 plot3(r_earth(:,1),r_earth(:,2),r_earth(:,3),'Color',earth_blue)
 legend('Sun','Mars','Earth','Trajectory')
 title('Minimum energy trajectory')
+axis equal
 
-disp('Time of flight (days):'); disp(tf-tl);
+% Date of min. energy departure and arrival
+dt_dep = datetime(tl_min,'ConvertFrom','juliandate');
+dt_arr = datetime(ta_min,'ConvertFrom','juliandate');
+
+disp('Departure date:'); disp(dt_dep)
+disp('Arrival date:'); disp(dt_arr)
+disp('Time of flight (days):'); disp(ta_min-tl_min);
 disp('V_inf (km/s):'); disp(v_inf);
 disp('C3 (km^2/s^2:'); disp(c3);
 
 % Display text on plot
-annstr = sprintf('TOF (days): %0.3g \n $v_{inf}$ (km/s): %0.3g \n C3 (km$^2$/s$^2$): %0.3g', ...
-    tf-tl,v_inf,c3'); % annotation text
-annpos = [0.7 0.5 0.1 0.1]; % annotation position in figure coordinates
-ha = annotation('textbox',annpos,'string',annstr,'Interpreter','latex');
-ha.HorizontalAlignment = 'left';
-ha.BackgroundColor = [1 1 1];
+% annstr = sprintf('TOF (days): %0.3g \n $v_{inf}$ (km/s): %0.3g \n C3 (km$^2$/s$^2$): %0.3g', ...
+%     ta_min-tl_min,v_inf,c3'); % annotation text
+% annpos = [0.7 0.5 0.1 0.1]; % annotation position in figure coordinates
+% ha = annotation('textbox',annpos,'string',annstr,'Interpreter','latex');
+% ha.HorizontalAlignment = 'left';
+% ha.BackgroundColor = [1 1 1];
 
 
