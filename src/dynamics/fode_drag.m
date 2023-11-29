@@ -3,8 +3,12 @@ date = t_epoch + seconds(t);
 LLA = eci2lla_datetime(x(1:3)',date);
 % Density Model
 warning('off','aero:atmosnrlmsise00:invalidAltitude');
-[f107average,f107daily,magneticIndex] = fluxSolarAndGeomagnetic(date.Year,day(date,'dayofyear'),date.Second,space_weather_data);
-[~, rho] = atmosnrlmsise00(LLA(3),LLA(1),LLA(2),date.Year,day(date,'dayofyear'),date.Second,f107average,f107daily,magneticIndex);
+[f107average,f107daily,magneticIndex] = fluxSolarAndGeomagnetic(...
+    date.Year,day(date,'dayofyear'),...
+    date.Second,space_weather_data);
+[~, rho] = atmosnrlmsise00(LLA(3),LLA(1),LLA(2),...
+    date.Year,day(date,'dayofyear'),date.Second,...
+    f107average,f107daily,magneticIndex);
 rho = rho(6); % This is the total parameter
 warning('on','aero:atmosnrlmsise00:invalidAltitude');
 % Drag Perturbation

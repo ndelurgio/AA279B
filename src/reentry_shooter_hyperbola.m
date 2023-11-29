@@ -11,7 +11,7 @@ for iter = 1:max_iter
     dv = vi-vel_ti_des;
     disp(norm(dv))
     % End if converged
-    if norm(dv) < 1
+    if norm(dv) < 0.1
         break
     end
     % Perturb px

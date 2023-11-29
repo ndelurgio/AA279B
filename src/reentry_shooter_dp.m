@@ -7,18 +7,11 @@ dp = 1000;
 dt = 1;
 max_iter = 100;
 
-run_ode = @(pi,tf,ti_curr) ode113(...
-    @fode_drag,...
-    0:time_step:tf,...
-    [pi,vel_ti],...
-    options,mu_earth,capsule,ti_curr,space_weather_data);
-
 J = zeros(3,4);
 for iter = 1:max_iter
-    % Get current range inertial position
-    % pos_tf = lla2eci(range_LLA,datetime2vec(ti+seconds(t_duration)));
     % Nominal run to get error
-    [~,traj_nom]=run_ode(pos_ti,t_duration,ti);
+    [~,traj_nom]=fast_drag_sim(t_duration,pos_ti,vel_ti,mu_earth,capsule,ti,space_weather_data,options);
+    % [~,traj_nom]=run_ode(pos_ti,t_duration,ti);
     dr = traj_nom(end,1:3)-pos_tf;
     disp(norm(dr))
     % End if converged
@@ -26,20 +19,20 @@ for iter = 1:max_iter
         break
     end
     % Perturb vx
-    [~,traj_high]=run_ode(pos_ti + [dp,0,0],t_duration,ti);
-    [~,traj_low]=run_ode(pos_ti - [dp,0,0],t_duration,ti);
+    [~,traj_high]=fast_drag_sim(t_duration,pos_ti + [dp,0,0],vel_ti,mu_earth,capsule,ti,space_weather_data,options);
+    [~,traj_low]=fast_drag_sim(t_duration,pos_ti - [dp,0,0],vel_ti,mu_earth,capsule,ti,space_weather_data,options);
     J(:,1) = getColJ(traj_high(end,1:3),traj_low(end,1:3),dp);
     % Perturb vy
-    [~,traj_high]=run_ode(pos_ti + [0,dp,0],t_duration,ti);
-    [~,traj_low]=run_ode(pos_ti - [0,dp,0],t_duration,ti);
+    [~,traj_high]=fast_drag_sim(t_duration,pos_ti + [0,dp,0],vel_ti,mu_earth,capsule,ti,space_weather_data,options);
+    [~,traj_low]=fast_drag_sim(t_duration,pos_ti - [0,dp,0],vel_ti,mu_earth,capsule,ti,space_weather_data,options);
     J(:,2) = getColJ(traj_high(end,1:3),traj_low(end,1:3),dp);
     % Perturb vz
-    [~,traj_high]=run_ode(pos_ti + [0,0,dp],t_duration,ti);
-    [~,traj_low]=run_ode(pos_ti - [0,0,dp],t_duration,ti);
+    [~,traj_high]=fast_drag_sim(t_duration,pos_ti + [0,0,dp],vel_ti,mu_earth,capsule,ti,space_weather_data,options);
+    [~,traj_low]=fast_drag_sim(t_duration,pos_ti - [0,0,dp],vel_ti,mu_earth,capsule,ti,space_weather_data,options);
     J(:,3) = getColJ(traj_high(end,1:3),traj_low(end,1:3),dp);
     % Perturb t
-    [~,traj_high]=run_ode(pos_ti,t_duration+dt,ti);
-    [~,traj_low]=run_ode(pos_ti,t_duration-dt,ti);
+    [~,traj_high]=fast_drag_sim(t_duration+dt,pos_ti,vel_ti,mu_earth,capsule,ti,space_weather_data,options);
+    [~,traj_low]=fast_drag_sim(t_duration-dt,pos_ti,vel_ti,mu_earth,capsule,ti,space_weather_data,options);
     J(:,4) = getColJ(traj_high(end,1:3),traj_low(end,1:3),dt);
     % Update nominal
     update = [pos_ti';t_duration] - pinv(J)*dr';
