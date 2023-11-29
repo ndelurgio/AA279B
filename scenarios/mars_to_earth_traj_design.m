@@ -28,6 +28,8 @@ verify_ta = datetime(ta_range,'ConvertFrom','juliandate');
 %% Explore design space using Lambert solver
 num_cases = length(tl_range)*length(ta_range); % matrix grid of possible launch/transfer time combinations
 dVs = NaN*ones(length(tl_range),length(ta_range)); % indices match that of tl_range by tf_range
+v1s = NaN*ones(length(tl_range),length(ta_range),3);
+
 % Pre-compute planet ephermides
 [r1_mars_hc,v1_mars_hc] = planet_ephemeris_hci(tl_range','Mars');
 [r2_earth_hc,v2_earth_hc] = planet_ephemeris_hci(ta_range','Earth');
@@ -52,6 +54,8 @@ for i=1:length(tl_range)
         % Lambert solver
         nrev = 0;
         [v1_dep,~] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,tof);
+        v1s(i,j,:) = v1_dep; % store dep velocity
+
         % Calculate delta-Vs
         dV1 = norm(v1_dep-v1_mars_hci); % v_inf at t1
         dVs(i,j) = dV1;

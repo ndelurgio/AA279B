@@ -5,7 +5,7 @@
 % Requires: Aerospace Toolbox, aeroDataPackage
 
 %% Setup
-% setup_constants;
+setup_constants;
 
 %% CONFIGURABLE PARAMETERS
 
