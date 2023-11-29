@@ -9,17 +9,17 @@
 setup_constants;
 
 %% CONFIGURABLE PARAMETERS
-t1_mars_departure = date2JD('2032-12-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
+t1_mars_departure = date2JD('2032-11-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
 
 % Times of launch and transfer times
 tl_int = 1/3; % time interval to step through [days]
-tl_max = 119; % maximum launch delay [days]
+tl_max = 179; % maximum launch delay [days]
 tl_range = (0:tl_int:tl_max) + t1_mars_departure; % absolute time in days
 verify_tl = datetime(tl_range,'ConvertFrom','juliandate');
 
 tf_int = 1/3; % time interval to step through [days]
 tf_min = 178; % minimum duration of transfer time [days]
-tf_max = 13*30; % maximum duration of transfer time [days]
+tf_max = 15*30; % maximum duration of transfer time [days]
 tf_range = (tf_min:tf_int:tf_max) + t1_mars_departure; % [days]
 verify_tf = datetime(tf_range,'ConvertFrom','juliandate');
 
@@ -83,14 +83,12 @@ set(col, 'TickLabelInterpreter', 'latex');
 
 % Set tick labels as dates
 xt = xticks;
-a = tl_range(1:round(length(tl_range)/length(xt)):end);
-b = datetime(a,'ConvertFrom','juliandate','Format','MMM-dd-yyy');
-xticklabels(string(b));
+xdt = datetime(xt,'ConvertFrom','juliandate','Format','MMM-dd-yyy');
+xticklabels(string(xdt));
 
 yt = yticks;
-a = tf_range(1:round(length(tf_range)/length(yt)):end);
-b = datetime(a,'ConvertFrom','juliandate','Format','MMM-dd-yyy');
-yticklabels(string(b));
+ydt = datetime(yt,'ConvertFrom','juliandate','Format','MMM-dd-yyy');
+yticklabels(string(ydt));
 
 grid on
 
@@ -117,8 +115,13 @@ ic = [r1_mars_hci,v1_dep];
 % Simulation settings
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 n_steps = 1000;
+tspan = linspace(0,dt_sec,n_steps);
+[t,traj] = ode113(@fode,tspan,ic,options,mu_Sun);
 
-[t,traj] = ode113(@fode,linspace(0,dt_sec,n_steps),ic,options,mu_Sun);
+% Earth and Mars positions
+tspan_d = linspace(tl,tf,n_steps);
+r_mars = planet_ephemeris_hci(tspan_d','Mars');
+r_earth = planet_ephemeris_hci(tspan_d','Earth');
 
 % Trajectory visualization
 earth_blue = [11,98,212]/255;
@@ -128,6 +131,8 @@ figure('Name','Trajectory'); visualize_heliocentric_3d()
 scatter3(r1_mars_hci(1),r1_mars_hci(2),r1_mars_hci(3),36,mars_red,'filled','Marker','o')
 scatter3(r2_earth_hci(1),r2_earth_hci(2),r2_earth_hci(3),36,earth_blue,'filled','Marker','o')
 plot3(traj(:,1),traj(:,2),traj(:,3))
+plot3(r_mars(:,1),r_mars(:,2),r_mars(:,3),'Color',mars_red)
+plot3(r_earth(:,1),r_earth(:,2),r_earth(:,3),'Color',earth_blue)
 legend('Sun','Mars','Earth','Trajectory')
 title('Minimum energy trajectory')
 
