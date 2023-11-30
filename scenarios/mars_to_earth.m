@@ -5,14 +5,14 @@
 % Requires: Aerospace Toolbox, aeroDataPackage
 
 %% Setup
-setup_constants;
+% setup_constants;
 
 %% CONFIGURABLE PARAMETERS
 
 start_body = 'Mars';
 target_body = 'Earth';
-t1_mars_departure = date2JD('2033-01-14 00:00:00'); %'2020-07-30 04:50'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
-t2_earth_arrival = date2JD('2033-08-20'); %'2021-02-18 00:00');  %'2033-08-01 00:00'); %'2021-02-18 00:00');
+t1_mars_departure = period_start; %date2JD('2033-01-14 00:00:00'); %'2020-07-30 04:50'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
+t2_earth_arrival = ta_min; %date2JD('2033-08-20'); %'2021-02-18 00:00');  %'2033-08-01 00:00'); %'2021-02-18 00:00');
 % Mars 2020: C3 14.49 km^2/s^2, tof 213 days (https://www.jpl.nasa.gov/news/press_kits/mars_2020/launch/mission/)
 
 %% LAMBERT SOLVER
@@ -42,28 +42,46 @@ r_mars = planet_ephemeris_hci(tspan_d','Mars');
 r_earth = planet_ephemeris_hci(tspan_d','Earth');
 
 %% Trajectory visualization
+
+plotAU = true; % plot in au vs. km
+
 earth_blue = [11,98,212]/255;
 mars_red = [252,80,3]/255;
-figure('Name','Trajectory'); visualize_heliocentric_3d()
-scatter3(r1_mars_hci(1),r1_mars_hci(2),r1_mars_hci(3),36,mars_red,'filled','Marker','o')
-scatter3(r2_earth_hci(1),r2_earth_hci(2),r2_earth_hci(3),36,earth_blue,'filled','Marker','o')
-plot3(traj(:,1),traj(:,2),traj(:,3))
-plot3(r_mars(:,1),r_mars(:,2),r_mars(:,3),'Color',mars_red)
-plot3(r_earth(:,1),r_earth(:,2),r_earth(:,3),'Color',earth_blue)
+figure('Name','Trajectory'); visualize_heliocentric_3d(); axis equal; 
+
+if plotAU
+    scatter3(km2au(r1_mars_hci(1)),km2au(r1_mars_hci(2)),km2au(r1_mars_hci(3)),36,mars_red,'filled','Marker','o')
+    scatter3(km2au(r2_earth_hci(1)),km2au(r2_earth_hci(2)),km2au(r2_earth_hci(3)),36,earth_blue,'filled','Marker','o')
+    plot3(km2au(traj(:,1)),km2au(traj(:,2)),km2au(traj(:,3)))
+    % plot3(km2au(r_mars(:,1)),km2au(r_mars(:,2)),km2au(r_mars(:,3)),'Color',mars_red)
+    % plot3(km2au(r_earth(:,1)),km2au(r_earth(:,2)),km2au(r_earth(:,3)),'Color',earth_blue)
+    xlabel('X (AU)'); ylabel('Y (AU)'); zlabel('Z (AU)')
+    zlim([-1 1])
+else 
+    scatter3(r1_mars_hci(1),r1_mars_hci(2),r1_mars_hci(3),36,mars_red,'filled','Marker','o')
+    scatter3(r2_earth_hci(1),r2_earth_hci(2),r2_earth_hci(3),36,earth_blue,'filled','Marker','o')
+    plot3((traj(:,1)),(traj(:,2)),(traj(:,3)))
+    plot3(r_mars(:,1),r_mars(:,2),r_mars(:,3),'Color',mars_red)
+    plot3(r_earth(:,1),r_earth(:,2),r_earth(:,3),'Color',earth_blue)
+    zlim([-1e8 1e8])
+end
 legend('Sun','Mars','Earth','Trajectory')
 title([start_body,' to ', target_body])
-axis equal
 
 tof_days = t2_earth_arrival-t1_mars_departure;
 disp('Time of flight (days):'); disp(tof_days);
 disp('V_inf (km/s):'); disp(v_inf);
 disp('C3 (km^2/s^2:'); disp(c3);
 
+showData = false;
+
 % Display text on plot
-annstr = sprintf('TOF (days): %0.3g \n $v_{inf}$ (km/s): %0.3g \n C3 (km$^2$/s$^2$): %0.3g', ...
-    tof_days,v_inf,c3'); % annotation text
-annpos = [0.7 0.5 0.1 0.1]; % annotation position in figure coordinates
-ha = annotation('textbox',annpos,'string',annstr,'Interpreter','latex');
-ha.HorizontalAlignment = 'left';
-ha.BackgroundColor = [1 1 1];
+if showData
+    annstr = sprintf('TOF (days): %0.3g \n $v_{inf}$ (km/s): %0.3g \n C3 (km$^2$/s$^2$): %0.3g', ...
+        tof_days,v_inf,c3'); % annotation text
+    annpos = [0.7 0.5 0.1 0.1]; % annotation position in figure coordinates
+    ha = annotation('textbox',annpos,'string',annstr,'Interpreter','latex');
+    ha.HorizontalAlignment = 'left';
+    ha.BackgroundColor = [1 1 1];
+end
 

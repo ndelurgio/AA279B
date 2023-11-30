@@ -9,19 +9,22 @@
 setup_constants;
 
 %% CONFIGURABLE PARAMETERS
-t1_mars_departure = date2JD('2032-11-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
+t1_mars_departure = date2JD('2032-09-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
 
 % Times of launch
-tl_int = 1/3; % time interval to step through [days]
-tl_max = 179; % maximum launch delay [days]
+tl_int = 1; % time interval to step through [days]
+tl_max = 179+60; % maximum launch delay [days]
 tl_range = (0:tl_int:tl_max) + t1_mars_departure; % absolute time in days
 verify_tl = datetime(tl_range,'ConvertFrom','juliandate');
 
 % Times of arrival
-tf_int = 1/3; % time interval to step through [days]
-ta_min = 178; % minimum duration of transfer time [days]
-tf_max = 15*30; % maximum duration of transfer time [days]
-ta_range = (ta_min:tf_int:tf_max) + t1_mars_departure; % [days]
+% tf_int = 1; % time interval to step through [days]
+% ta_min = 178; % minimum duration of transfer time [days]
+% tf_max = 15*30; % maximum duration of transfer time [days]
+%ta_range = (ta_min:tf_int:tf_max) + t1_mars_departure; % [days]
+ta_start = date2JD('2033-06-01 00:00');
+ta_end = date2JD('2033-12-31 00:00');
+ta_range = ta_start:1:ta_end;
 verify_ta = datetime(ta_range,'ConvertFrom','juliandate');
 
 
@@ -69,10 +72,10 @@ toc
 
 figure('Name','Porkchop plot')
 [x,y] = meshgrid(tl_range,ta_range);
-c3s = (dVs.^2).';
+c3s = (dVs.^2);
 c3_lvls = 0:2:20;
 %contour(x,y,c3s,c3_lvls)
-[c_cont,h_cont] = contourf(x,y,c3s,c3_lvls,'ShowText',true,"FaceAlpha",0.3);
+[c_cont,h_cont] = contourf(x,y,c3s.',c3_lvls,'ShowText',true,"FaceAlpha",0.3);
 clabel(c_cont,h_cont,2:2:20);
 title('Mars to Earth')
 xlabel('Mars departure date (UTC)')
