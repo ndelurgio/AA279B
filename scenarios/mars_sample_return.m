@@ -7,10 +7,15 @@ mars_to_earth_traj_design;
 % Initial Time
 % ti_utc = datetime(2028, 1, 1, 1, 1, 1);
 t_duration = days(1);
-ti_utc = datetime(tf,'ConvertFrom','juliandate') - t_duration;
+ti_utc = datetime(ta_min,'ConvertFrom','juliandate') - t_duration;
 % Initial Position
 earth_soi = 0.929E9;
 v_inf = (v2_arr - v2_earth_hci)*10^3;
+% theta = deg2rad(23.45);
+% T_eci2hci = [1 0 0;
+%              0 cos(theta) sin(theta);
+%              0 -sin(theta) cos(theta)];
+% v_inf = (T_eci2hci'*v_inf')';
 u_inf = v_inf/norm(v_inf);
 capsule_pos_ti_j2000 = -u_inf*earth_soi;
 % capsule_pos_ti_j2000 = [5.0e+06,-2.0e+06,5.0e+06];
@@ -109,17 +114,34 @@ geoplot3(g,LLA_traj_shooter(:,1),LLA_traj_shooter(:,2),LLA_traj_shooter(:,3),'Li
 legend(["Lambert Solution (Kepler)","Kepler+Drag"])
 %% Hyperbolas
 [t_traj_2,capsule_traj_2] = fast_unperturbed_sim(2*t_sim,capsule_pos_ti_j2000,capsule_vel_ti_j2000,mu_earth);
-capsule_traj_plot = capsule_traj(vecnorm(capsule_traj(:,1:3),2,2) < 10000e3, :);
-capsule_traj_2_plot = capsule_traj_2(vecnorm(capsule_traj_2(:,1:3),2,2) < 10000e3, :);
+capsule_traj_plot = capsule_traj(vecnorm(capsule_traj(:,1:3),2,2) < 100000e3, :);
+capsule_traj_2_plot = capsule_traj_2(vecnorm(capsule_traj_2(:,1:3),2,2) < 100000e3, :);
 
 figure;
 hold on;
 plot3(capsule_traj_plot(:,1)/1000,capsule_traj_plot(:,2)/1000,capsule_traj_plot(:,3)/1000,'-b',LineWidth=2)
 plot3(capsule_traj_2_plot(round(end/2):end,1)/1000,capsule_traj_2_plot(round(end/2):end,2)/1000,capsule_traj_2_plot(round(end/2):end,3)/1000,'--b',LineWidth=2)
-% axis equal;
+axis equal;
+I = imread("earth2.jpg");
+[x,y,z] = sphere;              % create a sphere 
+s = surface(6.378e3*x,6.378e3*y,6.378e3*z);            % plot spherical surface
+
+s.FaceColor = 'texturemap';    % use texture mapping
+s.CData = flipud(I);                % set color data to topographic data
+s.EdgeColor = 'none';          % remove edges
+s.FaceLighting = 'gouraud';    % preferred lighting for curved surfaces
+s.SpecularStrength = 0.4;      % change the strength of the reflected light
+
+light('Position',[-1 0 1])     % add a light
 grid on;
 xlabel('X [km]')
 ylabel('Y [km]')
 zlabel('Z [km]')
-view(30,30)
+% view(30,30)
 % zlim([-1e6,1e6])
+% ylim([-1e6,1e6])
+% xlim([-1e6,1e6])
+xlim([-104148 77231])
+ylim([-126572 54806])
+zlim([-137721 43657])
+view([-434 12])
