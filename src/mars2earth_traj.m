@@ -1,4 +1,4 @@
-function [v_inf,c3] = mars2earth_traj(tl,ta,mu_Sun)
+function [v_inf,c3,r1_mars_hci,v1_mars_hci,r2_earth_hci,v2_earth_hci] = mars2earth_traj(tl,ta,mu_Sun)
 % Computes the v_inf, c3 of an interplanetary trajectory for given launch
 % and arrival dates and produces a heliocentric plot
     dt_sec = (ta-tl)*24*3600;

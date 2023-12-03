@@ -9,9 +9,6 @@ nu_thresh = nu_thresh * sign(M_init);
 M_thresh = nu2M_hyp(nu_thresh,ecc);
 n = sqrt(mu_earth/abs(a)^3);
 t_thresh = (M_thresh - M_init)/n;
-if ~isreal(t_thresh)
-    t_thresh = t_duration - 90;
-end
 % Fast kepler sim
 t_traj = 0:dt:t_thresh;
 traj = zeros(length(t_traj),6);

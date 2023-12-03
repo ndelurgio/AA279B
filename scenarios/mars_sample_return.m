@@ -94,7 +94,7 @@ for k=1:length(tf_utc_range)
 
 end
 
-%% Plot angle vs. tof
+% Plot angle vs. tof
 figure('Name','FPA vs. TOF')
 yyaxis left
 plot(tof_range,fpa_data)
@@ -134,7 +134,7 @@ disp('Earth re-entry angle (deg):'); disp(fpa_e)
 % [capsule_vel_ti_j2000, capsule_vel_tf_j2000, error_out] = AA279lambert_curtis(mu_earth, capsule_pos_ti_j2000, range_pos_tf_j2000, 'retro', 0, t_lambert);
 % t_sim = t_lambert + 60;
 %% FODE
-% options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
+options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 % [t_traj,capsule_traj] = ode113(...
 %     @fode,...
 %     0:dt_sec:t_lambert,...
