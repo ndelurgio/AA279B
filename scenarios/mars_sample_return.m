@@ -13,26 +13,32 @@ dt_sec = (ta-tl)*24*3600;
 
 % Initial Time
 % ti_utc = datetime(2028, 1, 1, 1, 1, 1);
-t_duration = days(0.5);
-ti_utc = datetime(ta,'ConvertFrom','juliandate') - t_duration;
+% t_duration = days(0.5);
+% ti_utc = datetime(ta,'ConvertFrom','juliandate') - t_duration;
+
+% Initial time = time of arrival (approximate)
+ti_utc = datetime(ta,'ConvertFrom','juliandate');
+
 % Initial Position
 earth_soi = 0.929E9;
 [~,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
-v_inf = (v2_arr - v2_earth_hci)*10^3;
-% theta = deg2rad(23.45);
-% T_eci2hci = [1 0 0;
-%              0 cos(theta) sin(theta);
-%              0 -sin(theta) cos(theta)];
-% v_inf = (T_eci2hci'*v_inf')'; 
+v_inf_hci = (v2_arr - v2_earth_hci)*10^3;
+v_inf = hci2eci(v_inf_hci); % excess arrival velocity in ECI expressed in Earth-centered coordinates
 u_inf = v_inf/norm(v_inf);
-% Landing Time
-tf_utc = ti_utc + t_duration;
+
+% Landing Times - search within a 24-hour window to span range
+% tf_utc = ti_utc + t_duration;
+tf_utc_range = ti_utc + hours(0:2:24);
+
 % Landing Position: Utah test & training range
 range_lat_deg = 40.489831374;
 range_lon_deg = -113.635330792; 
 range_alt = 0;
 range_LLA = [range_lat_deg,range_lon_deg,range_alt];
 
+% Loop through range of times of flight
+for i=1:length(tf_utc_range)
+    tf_utc = tf_utc_range(i);
 range_pos_tf_j2000 = lla2eci([range_lat_deg,range_lon_deg,range_alt],datetime2vec(tf_utc));
 % n = cross(v_inf,range_pos_tf_j2000)/norm(cross(v_inf,range_pos_tf_j2000));
 % p = cross(n,u_inf);
