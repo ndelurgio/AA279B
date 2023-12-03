@@ -3,30 +3,49 @@ close all;
 %% Run Mars to Earth
 mars_to_earth_traj_design;
 %% CONFIGURABLE PARAMETERS
+load("mins.mat")
+ta = ta_min; % JD
+% tl = date2JD('2033-01-01 12:00'); % JD
+tl = tl_min;
+
+dt_sec = (ta-tl)*24*3600;
+[v1_dep,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,dt_sec);
 
 % Initial Time
 % ti_utc = datetime(2028, 1, 1, 1, 1, 1);
-t_duration = days(1);
-ti_utc = datetime(ta_min,'ConvertFrom','juliandate') - t_duration;
+t_duration = days(0.5);
+ti_utc = datetime(ta,'ConvertFrom','juliandate') - t_duration;
 % Initial Position
 earth_soi = 0.929E9;
+[~,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
 v_inf = (v2_arr - v2_earth_hci)*10^3;
 % theta = deg2rad(23.45);
 % T_eci2hci = [1 0 0;
 %              0 cos(theta) sin(theta);
 %              0 -sin(theta) cos(theta)];
-% v_inf = (T_eci2hci'*v_inf')';
+% v_inf = (T_eci2hci'*v_inf')'; 
 u_inf = v_inf/norm(v_inf);
-capsule_pos_ti_j2000 = -u_inf*earth_soi;
-% capsule_pos_ti_j2000 = [5.0e+06,-2.0e+06,5.0e+06];
 % Landing Time
-% tf_utc = datetime(2028, 1, 1, 1, 10, 1);
 tf_utc = ti_utc + t_duration;
 % Landing Position: Utah test & training range
 range_lat_deg = 40.489831374;
 range_lon_deg = -113.635330792; 
 range_alt = 0;
 range_LLA = [range_lat_deg,range_lon_deg,range_alt];
+
+range_pos_tf_j2000 = lla2eci([range_lat_deg,range_lon_deg,range_alt],datetime2vec(tf_utc));
+% n = cross(v_inf,range_pos_tf_j2000)/norm(cross(v_inf,range_pos_tf_j2000));
+% p = cross(n,u_inf);
+% capsule_pos_ti_j2000 = -u_inf*earth_soi - p*5e8;
+
+
+% if ang(range_pos_tf_j2000,v_inf) < pi/2
+%     t_duration = days(1);
+%     tf_utc = ti_utc + t_duration;
+%     range_pos_tf_j2000 = lla2eci([range_lat_deg,range_lon_deg,range_alt],datetime2vec(tf_utc));
+% end
+
+
 
 %% CONSTANTS
 mu_earth = 3.986004415E14;
@@ -41,19 +60,78 @@ capsule.Cd = 2.2;
 capsule.A = 3;
 capsule.m = 200;
 capsule.B = capsule.Cd * capsule.A / capsule.m;
+%% New Hyperbola Design
+theta = acos(dot(v_inf,range_pos_tf_j2000)/(norm(v_inf)*norm(range_pos_tf_j2000)));
+rt = norm(range_pos_tf_j2000);
+energy = norm(v_inf)^2/2;
+a = -mu_earth/(2*energy);
+
+e_max = 1 - rt/a;
+e_vec = 1:0.001:e_max;
+nu_vec = zeros(1,length(e_vec));
+psi_vec = zeros(1,length(e_vec));
+
+for i = 1:length(e_vec)
+    e = e_vec(i);
+    psi_vec(i) = acos(-1/e);
+    nu_vec(i) = -acos(a*(1-e^2)/(rt*e)-1/e);
+end
+tot_ang = psi_vec + nu_vec + theta;
+figure;
+hold on;
+plot(e_vec,rad2deg(nu_vec))
+plot(e_vec,rad2deg(psi_vec))
+plot(e_vec,rad2deg(tot_ang))
+plot(e_vec,rad2deg(tot_ang-pi))
+legend(["$\nu$","$\psi$","$\nu+\psi+\theta$"],"Interpreter","latex","Location","southeast")
+xlabel("Eccentricity")
+ylabel("Angle [deg]")
+
+f_ang = @(e) acos(-1/e) - acos(a*(1-e^2)/(rt*e)-1/e) + theta - pi;
+low = 1;
+high = e_max;
+while abs(high-low)/2 > 1e-9
+    c = (low+high)/2;
+    if sign(f_ang(c)) == sign(f_ang(low))
+       low = c; 
+    else
+        high = c;
+    end
+end
+e_des = (low+high)/2;
+
+x = v_inf'/norm(v_inf);
+z = cross(x,range_pos_tf_j2000')/norm(cross(x,range_pos_tf_j2000'));
+y = cross(z,x);
+C_hyp2eci = [x,y,z];
+
+rp_mag = a*(1-e_des);
+psi = acos(-1/e);
+rp_vec = [rp_mag*cos(pi-psi); rp_mag*sin(pi-psi); 0];
+vp_mag = sqrt(2*mu_earth/rp_mag-mu_earth/a);
+vp_vec = cross(rp_vec/norm(rp_vec),[0;0;1])*vp_mag;
+capsule_pos_tp_j2000 = (C_hyp2eci*rp_vec)';
+capsule_vel_tp_j2000 = (C_hyp2eci*vp_vec)';
+
+nuf = -acos(a*(1-e_des^2)/(rt*e_des)-1/e_des);
+nui = -acos(a*(1-e_des^2)/(earth_soi*e_des)-1/e_des);
+[a,e,i,Om,w,~,~,~,~] = rv2orb(capsule_pos_tp_j2000', capsule_vel_tp_j2000', mu_earth);
+[capsule_pos_ti_j2000, capsule_vel_ti_j2000] = orb2rv(a*(1-e^2)/1000,e,i,Om,w,nui);
+capsule_pos_ti_j2000 = capsule_pos_ti_j2000'*1000;
+capsule_vel_ti_j2000 = capsule_vel_ti_j2000'*1000;
+
+n = sqrt(mu_earth/abs(a)^3);
+t_lambert = (nu2M_hyp(nuf,e_des) - nu2M_hyp(nui,e_des))/n;
+t_sim = t_lambert + 60;
+
 
 %% MODEL
-range_pos_tf_j2000 = lla2eci([range_lat_deg,range_lon_deg,range_alt],datetime2vec(tf_utc));
-t_lambert = seconds(tf_utc - ti_utc);
+% t_lambert = seconds(tf_utc - ti_utc);
+% % [capsule_vel_ti_j2000, capsule_vel_tf_j2000, error_out] = AA279lambert_curtis(mu_earth, capsule_pos_ti_j2000, range_pos_tf_j2000, 'retro', 0, t_lambert);
+% % [capsule_vel_ti_j2000, capsule_vel_tf_j2000, error_out] = AA279lambert_vallado_u(mu_earth, capsule_pos_ti_j2000, range_pos_tf_j2000, 's', 0, t_lambert);
+% [capsule_pos_ti_j2000,t_lambert,iter] = reentry_shooter_hyperbola(capsule_pos_ti_j2000,t_lambert,v_inf,range_pos_tf_j2000,mu_earth);
 % [capsule_vel_ti_j2000, capsule_vel_tf_j2000, error_out] = AA279lambert_curtis(mu_earth, capsule_pos_ti_j2000, range_pos_tf_j2000, 'retro', 0, t_lambert);
-% [capsule_vel_ti_j2000, capsule_vel_tf_j2000, error_out] = AA279lambert_vallado_u(mu_earth, capsule_pos_ti_j2000, range_pos_tf_j2000, 's', 0, t_lambert);
-[capsule_pos_ti_j2000,t_lambert,iter] = reentry_shooter_hyperbola(capsule_pos_ti_j2000,t_lambert,v_inf,range_pos_tf_j2000,mu_earth);
-[capsule_vel_ti_j2000, capsule_vel_tf_j2000, error_out] = AA279lambert_curtis(mu_earth, capsule_pos_ti_j2000, range_pos_tf_j2000, 'retro', 0, t_lambert);
-t_sim = t_lambert + 60;
-% [capsule_pos_ti_j2000,t_lambert,iter] = unperturbed_shooter_dp(capsule_pos_ti_j2000,t_lambert,capsule_vel_ti_j2000,range_pos_tf_j2000,mu_earth);
-% [capsule_vel_ti_j2000, capsule_vel_tf_j2000, error_out] = AA279lambert_curtis(mu_earth, capsule_pos_ti_j2000, range_pos_tf_j2000, 'retro', 0, t_lambert);
-%% Hyperbola Orbit Elements
-% [a,ecc,incl,RAAN,argp,nu,truelon,arglat,lonper] = rv2orb(capsule_pos_ti_j2000', capsule_vel_ti_j2000', mu_earth);
+% t_sim = t_lambert + 60;
 %% FODE
 % options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 % [t_traj,capsule_traj] = ode113(...
@@ -63,24 +141,7 @@ t_sim = t_lambert + 60;
 %     options,mu_earth);
 % LLA_traj = eci2lla_datetime(capsule_traj(:,1:3),tf_utc - seconds(t_lambert) + seconds(t_traj));
 %% Kepler
-% t_traj = 0:dt_sec:(t_lambert);
-% t_traj = linspace(0,t_lambert,length(t_traj));
 [t_traj,capsule_traj] = fast_unperturbed_sim(t_sim,capsule_pos_ti_j2000,capsule_vel_ti_j2000,mu_earth);
-% capsule_traj = zeros(length(t_traj),6);
-% M0 = nu2M_hyp(wrapToPi(nu),ecc);
-% M_hist = zeros(length(t_traj),1);
-% nu_hist = zeros(length(t_traj),1);
-% n = sqrt(mu_earth/abs(a)^3);
-% warning ('off','all');
-% for i = 1:length(t_traj)
-%     M = M0 + n*t_traj(i);
-%     M_hist(i) = M;
-%     nu = wrapToPi(M2nu_hyp(M,ecc));
-%     nu_hist(i) = nu;
-%     [r,v] = orb2rv(a*(1-ecc^2)/1000,ecc,incl,RAAN,argp,wrapTo2Pi(nu));
-%     capsule_traj(i,:) = [r;v]'*1000;
-% end
-% warning ('on','all');
 LLA_traj = eci2lla_datetime(capsule_traj(:,1:3),tf_utc - seconds(t_lambert) + seconds(t_traj));
 
 %% With Drag
@@ -145,3 +206,7 @@ xlim([-104148 77231])
 ylim([-126572 54806])
 zlim([-137721 43657])
 view([-434 12])
+
+function ang = ang(u1,u2)
+ang = acos(dot(u1,u2)/(norm(u1)*norm(u2)));
+end
