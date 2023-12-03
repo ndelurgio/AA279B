@@ -69,7 +69,7 @@ capsule_pos_ti_j2000 = capsule_pos_ti_j2000'*1000;
 capsule_vel_ti_j2000 = capsule_vel_ti_j2000'*1000;
 
 n = sqrt(mu_earth/abs(a)^3);
-t_lambert = (nu2M_hyp(nuf,e_des) - nu2M_hyp(nui,e_des))/n;
+t_lambert = (nu2M_hyp(nuf,e) - nu2M_hyp(nui,e))/n;
 t_sim = t_lambert + 60;
 
 
