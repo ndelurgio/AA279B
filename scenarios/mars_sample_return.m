@@ -97,7 +97,7 @@ for k=1:length(tf_utc_range)
 
 end
 
-%% Plot angle vs. tof
+% Plot angle vs. tof
 figure('Name','FPA vs. TOF')
 yyaxis left
 plot(tof_range,fpa_data)
