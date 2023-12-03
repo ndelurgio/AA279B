@@ -1,9 +1,9 @@
 %clear
 %close all;
 %% Run Mars to Earth
-%mars_to_earth_traj_design;
+mars_to_earth_traj_design;
 %% CONFIGURABLE PARAMETERS
-load("mins.mat")
+%load("mins.mat")
 ta = ta_min; % JD
 % tl = date2JD('2033-01-01 12:00'); % JD
 tl = tl_min;
@@ -22,36 +22,19 @@ ti_utc = datetime(ta,'ConvertFrom','juliandate');
 % Initial Position
 earth_soi = 0.929E9;
 [~,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
-v_inf_hci = (v2_arr - v2_earth_hci)*10^3;
-v_inf = hci2eci(v_inf_hci); % excess arrival velocity in ECI expressed in Earth-centered coordinates
+v_inf_hci = (v2_arr - v2_earth_hci)*10^3; % [m/s]
+v_inf = hci2eci(v_inf_hci')'; % excess arrival velocity in ECI expressed in Earth-centered coordinates
 u_inf = v_inf/norm(v_inf);
 
 % Landing Times - search within a 24-hour window to span range
 % tf_utc = ti_utc + t_duration;
-tf_utc_range = ti_utc + hours(0:2:24);
+tf_utc_range = ti_utc + hours(1:1:24);
 
 % Landing Position: Utah test & training range
 range_lat_deg = 40.489831374;
 range_lon_deg = -113.635330792; 
 range_alt = 0;
 range_LLA = [range_lat_deg,range_lon_deg,range_alt];
-
-% Loop through range of times of flight
-for i=1:length(tf_utc_range)
-    tf_utc = tf_utc_range(i);
-range_pos_tf_j2000 = lla2eci([range_lat_deg,range_lon_deg,range_alt],datetime2vec(tf_utc));
-% n = cross(v_inf,range_pos_tf_j2000)/norm(cross(v_inf,range_pos_tf_j2000));
-% p = cross(n,u_inf);
-% capsule_pos_ti_j2000 = -u_inf*earth_soi - p*5e8;
-
-
-% if ang(range_pos_tf_j2000,v_inf) < pi/2
-%     t_duration = days(1);
-%     tf_utc = ti_utc + t_duration;
-%     range_pos_tf_j2000 = lla2eci([range_lat_deg,range_lon_deg,range_alt],datetime2vec(tf_utc));
-% end
-
-
 
 %% CONSTANTS
 mu_earth = 3.986004415E14;
@@ -66,7 +49,60 @@ capsule.Cd = 2.2;
 capsule.A = 3;
 capsule.m = 200;
 capsule.B = capsule.Cd * capsule.A / capsule.m;
-%% New Hyperbola Design
+
+%% Loop through range of times of flight to find the best hyperbola and FPA
+
+fpa_data = NaN(length(tf_utc_range),1);
+tof_range = hours(tf_utc_range-ti_utc);
+
+for k=1:length(tf_utc_range)
+    tf_utc = tf_utc_range(k);
+    range_pos_tf_j2000 = lla2eci(range_LLA,datetime2vec(tf_utc));
+% n = cross(v_inf,range_pos_tf_j2000)/norm(cross(v_inf,range_pos_tf_j2000));
+% p = cross(n,u_inf);
+% capsule_pos_ti_j2000 = -u_inf*earth_soi - p*5e8;
+
+
+% if ang(range_pos_tf_j2000,v_inf) < pi/2
+%     t_duration = days(1);
+%     tf_utc = ti_utc + t_duration;
+%     range_pos_tf_j2000 = lla2eci([range_lat_deg,range_lon_deg,range_alt],datetime2vec(tf_utc));
+% end
+
+    %% New Hyperbola Design
+    [a,e,i,Om,w] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
+    nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
+    nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
+    [capsule_pos_ti_j2000, capsule_vel_ti_j2000] = orb2rv(a*(1-e^2)/1000,e,i,Om,w,nui);
+    capsule_pos_ti_j2000 = capsule_pos_ti_j2000'*1000;
+    capsule_vel_ti_j2000 = capsule_vel_ti_j2000'*1000;
+    
+    n = sqrt(mu_earth/abs(a)^3);
+    t_lambert = (nu2M_hyp(nuf,e) - nu2M_hyp(nui,e))/n;
+    t_sim = t_lambert + 60;
+
+    % Design for flight path angle
+    [r_e,v_e,fpa_e] = hyperbola_edl(a,e,i,Om,w,mu_earth);
+    
+    % Store data
+    fpa_data(k) = fpa_e;
+
+end
+
+%% Plot angle vs. tof
+
+figure('Name','FPA vs. TOF')
+plot(tof_range,fpa_data)
+xlabel('TOF (hours)')
+ylabel('FPA (deg)')
+
+%% Choose an angle
+% For now, the earliest time it hits below 25 deg
+fpa_limit = 25; % [deg]
+idx = find(fpa_data<fpa_limit,1);
+tf_utc = tf_utc_range(idx);
+range_pos_tf_j2000 = lla2eci(range_LLA,datetime2vec(tf_utc));
+% Design hyperbola
 [a,e,i,Om,w] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
 nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
 nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
@@ -75,8 +111,11 @@ capsule_pos_ti_j2000 = capsule_pos_ti_j2000'*1000;
 capsule_vel_ti_j2000 = capsule_vel_ti_j2000'*1000;
 
 n = sqrt(mu_earth/abs(a)^3);
-t_lambert = (nu2M_hyp(nuf,e_des) - nu2M_hyp(nui,e_des))/n;
+t_lambert = (nu2M_hyp(nuf,e) - nu2M_hyp(nui,e))/n;
 t_sim = t_lambert + 60;
+
+% Flight path angle / EDL parameters
+[r_e,v_e,fpa_e] = hyperbola_edl(a,e,i,Om,w,mu_earth);
 
 
 %% MODEL
