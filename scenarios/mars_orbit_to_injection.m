@@ -170,12 +170,12 @@ v_inj_vec = (R_raan*R_i*R_aop)*v_inj_pqw;
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 % Orbital period
 T = 2*pi*sqrt(sma^3/mu_Mars);
+n_steps = 50;
 tspan = linspace(0,T,n_steps);
 [t,traj] = ode113(@fode,tspan,[r0;v0],options,mu_Mars);
 r_prk = traj(:,1:3);
 
 ic = [r0;v_inj_vec];
-n_steps = 50;
 [t,traj_inj] = ode113(@fode,tspan,ic,options,mu_Mars);
 
 % Visualize orbit

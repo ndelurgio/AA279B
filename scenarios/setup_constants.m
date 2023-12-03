@@ -20,3 +20,7 @@ mu_Mars = 4.282837e4;
 % Source: https://science.nasa.gov/resource/solar-system-sizes/
 R_Earth = 6371; % [km]
 R_Mars = 3390; 
+
+% Visualization
+earth_blue = [11,98,212]/255;
+mars_red = [252,80,3]/255;
