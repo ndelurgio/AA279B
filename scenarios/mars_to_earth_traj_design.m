@@ -9,7 +9,7 @@
 setup_constants;
 
 %% CONFIGURABLE PARAMETERS
-t1_mars_departure = date2JD('2032-09-01 00:00'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
+t1_mars_departure = date2JD('2033-01-15 00:00:00'); %'2032-09-01 00:00');
 
 % Times of launch
 tl_int = 1; % time interval to step through [days]
@@ -29,9 +29,11 @@ verify_ta = datetime(ta_range,'ConvertFrom','juliandate');
 
 
 %% Explore design space using Lambert solver
-num_cases = length(tl_range)*length(ta_range); % matrix grid of possible launch/transfer time combinations
-dVs = NaN*ones(length(tl_range),length(ta_range)); % indices match that of tl_range by tf_range
-v1s = NaN*ones(length(tl_range),length(ta_range),3);
+n_cases = length(tl_range)*length(ta_range); % matrix grid of possible launch/transfer time combinations
+% Data storage
+dVs = NaN(length(tl_range),length(ta_range)); % indices match that of tl_range by tf_range
+v1_data = NaN(length(tl_range),length(ta_range),3);
+v2_data = NaN(length(tl_range),length(ta_range),3);
 
 % Pre-compute planet ephermides
 [r1_mars_hc,v1_mars_hc] = planet_ephemeris_hci(tl_range','Mars');
@@ -56,8 +58,9 @@ for i=1:length(tl_range)
 
         % Lambert solver
         nrev = 0;
-        [v1_dep,~] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,tof);
-        v1s(i,j,:) = v1_dep; % store dep velocity
+        [v1_dep,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,tof);
+        v1_data(i,j,:) = v1_dep; % store dep velocity
+        v2_data(i,j,:) = v2_arr; % store arrival velocity for edl analysis
 
         % Calculate delta-Vs
         dV1 = norm(v1_dep-v1_mars_hci); % v_inf at t1
@@ -70,7 +73,7 @@ toc
 
 %% Porkchop plots for interplanetary transfer
 
-figure('Name','Porkchop plot')
+figure('Name','Porkchop plot'); hold on
 [x,y] = meshgrid(tl_range,ta_range);
 c3s = (dVs.^2);
 c3_lvls = 0:2:20;
@@ -83,6 +86,14 @@ ylabel('Earth arrival date (UTC)')
 % col = colorbar;
 % col.Label.String = 'C3 (km$^2$/s$^2$)'; col.Label.Interpreter = 'latex';
 % set(col, 'TickLabelInterpreter', 'latex');
+
+% Time of flight contours
+tof = y-x;
+tof_mo = tof / 30; 
+gray = [.5 .5 .5];
+[c,h] = contour(x,y,tof_mo,2:1:15,'ShowText',true,'EdgeColor',gray); 
+h.LevelList = round(h.LevelList, 1);
+clabel(c,h,'Color',gray);
 
 % Set tick labels as dates
 xt = xticks;

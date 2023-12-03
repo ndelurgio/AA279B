@@ -5,7 +5,7 @@ time_step = 1;
 
 dp = 1000;
 dt = 1;
-max_iter = 100;
+max_iter = 10;
 
 J = zeros(3,4);
 for iter = 1:max_iter

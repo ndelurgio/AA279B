@@ -11,7 +11,7 @@
 
 start_body = 'Mars';
 target_body = 'Earth';
-t1_mars_departure = period_start; %date2JD('2033-01-14 00:00:00'); %'2020-07-30 04:50'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
+t1_mars_departure = tl_min; %date2JD('2033-01-14 00:00:00'); %'2020-07-30 04:50'); %'2031-01-01 00:00'); %'2005-06-20 00:00'); %'2020-07-30 04:50');
 t2_earth_arrival = ta_min; %date2JD('2033-08-20'); %'2021-02-18 00:00');  %'2033-08-01 00:00'); %'2021-02-18 00:00');
 % Mars 2020: C3 14.49 km^2/s^2, tof 213 days (https://www.jpl.nasa.gov/news/press_kits/mars_2020/launch/mission/)
 
@@ -52,9 +52,9 @@ figure('Name','Trajectory'); visualize_heliocentric_3d(); axis equal;
 if plotAU
     scatter3(km2au(r1_mars_hci(1)),km2au(r1_mars_hci(2)),km2au(r1_mars_hci(3)),36,mars_red,'filled','Marker','o')
     scatter3(km2au(r2_earth_hci(1)),km2au(r2_earth_hci(2)),km2au(r2_earth_hci(3)),36,earth_blue,'filled','Marker','o')
-    plot3(km2au(traj(:,1)),km2au(traj(:,2)),km2au(traj(:,3)))
-    % plot3(km2au(r_mars(:,1)),km2au(r_mars(:,2)),km2au(r_mars(:,3)),'Color',mars_red)
-    % plot3(km2au(r_earth(:,1)),km2au(r_earth(:,2)),km2au(r_earth(:,3)),'Color',earth_blue)
+    plot3(km2au(traj(:,1)),km2au(traj(:,2)),km2au(traj(:,3)),'LineWidth',1)
+    plot3(km2au(r_mars(:,1)),km2au(r_mars(:,2)),km2au(r_mars(:,3)),'--','Color',mars_red)
+    plot3(km2au(r_earth(:,1)),km2au(r_earth(:,2)),km2au(r_earth(:,3)),'--','Color',earth_blue)
     xlabel('X (AU)'); ylabel('Y (AU)'); zlabel('Z (AU)')
     zlim([-1 1])
 else 

@@ -27,8 +27,6 @@ rp = alt+R_Mars;
 %% Loop through all v1s
 % Escape velocity
 v_esc = sqrt(2*mu_Mars/R_Mars);
-
-%v1s = [2 4 5; 13 5 6; 23 5 3]; % testing
 deltaVs = NaN*ones(length(tl_range),length(ta_range));
 
 for i=1:length(tl_range)
@@ -39,7 +37,7 @@ for i=1:length(tl_range)
         % end
 
         %v_dep = v1_dep; % from interplanetary analysis
-        v_dep = reshape(v1s(i,j,:),1,[]);
+        v_dep = reshape(v1_data(i,j,:),1,[]);
 
         % Relative velocity of spacecraft with respect to Mars
         v_inf_vec = v_dep - v1_mars_hci;
@@ -58,7 +56,7 @@ end
 %% Plot contours
 figure('Name','Delta-V porkchop plot')
 [x,y] = meshgrid(tl_range,ta_range);
-dv_lvls = [0:.5:4]; %[0:.2:4,5:2:40];
+dv_lvls = [0:.2:4]; %[0:.2:4,5:2:40];
 [dv_cont,dvh_cont] = contour(x,y,deltaVs',dv_lvls,'ShowText',true,"FaceAlpha",0.3,'Color','b'); hold on;
 clabel(dv_cont,dvh_cont,dv_lvls,'Color','b');
 c3_lvls = 0:1:10;
@@ -87,8 +85,8 @@ grid on
 zoom2launch = true;
 
 if (zoom2launch)
-    period_start = date2JD('2033-01-01 00:00:00');
-    period_duration = 28; % [days]
+    period_start = date2JD('2033-01-15 00:00:00');
+    period_duration = 20; % [days]
     
     % Zoom in on launch period
     period_end = period_start + period_duration;
@@ -139,9 +137,9 @@ legend('Delta-V','C3','Location','northwest')
 % title(['Time of arrival: ',datestr(datetime(date_arr,'ConvertFrom','juliandate'))])
 
 
-%% Plot specific injection velocity
+%% Injection velocity at a specified date
 
-tl = tl_min; %date2JD()
+tl = tl_min;
 ta = ta_min;
 i = find(tl_range==tl); j = find(ta_range==ta);
 
@@ -161,10 +159,6 @@ R_aop = [cos(aop) -sin(aop) 0;
 
 v_inj_vec = (R_raan*R_i*R_aop)*v_inj_pqw;
 
-ic = [r0;v_inj_vec];
-n_steps = 50;
-tspan = linspace(0,T,n_steps);
-[t,traj_inj] = ode113(@fode,tspan,ic,options,mu_Mars);
 
 
 %% Simulate Mars orbit and visualization
@@ -177,11 +171,16 @@ T = 2*pi*sqrt(sma^3/mu_Mars);
 [t,traj] = ode113(@fode,tspan,[r0;v0],options,mu_Mars);
 r_prk = traj(:,1:3);
 
+ic = [r0;v_inj_vec];
+n_steps = 50;
+tspan = linspace(0,T,n_steps);
+[t,traj_inj] = ode113(@fode,tspan,ic,options,mu_Mars);
+
 % Visualize orbit
 figure('Name','Mars injection visualization');
 visualize_planet('Mars'); hold on; 
-plot3(r_prk(:,1),r_prk(:,2),r_prk(:,3),'Color',mars_red);
-plot3(traj_inj(:,1),traj_inj(:,2),traj_inj(:,3),'Color',mars_red);
+plot3(r_prk(:,1),r_prk(:,2),r_prk(:,3),'Color',mars_red,'LineWidth',1);
+plot3(traj_inj(:,1),traj_inj(:,2),traj_inj(:,3),'Color',mars_red,'LineWidth',1);
 xlabel('X [km]')
 ylabel('Y [km]')
 zlabel('Z [km]')
