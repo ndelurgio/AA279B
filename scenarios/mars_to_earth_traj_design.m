@@ -112,4 +112,5 @@ min_vinf = min(min(dVs));
 tl_min = tl_range(i_min);
 ta_min = ta_range(j_min);
 
-[min_energy_v_inf,min_energy_c3,v1_mars_hci,r2_earth_hci,v2_earth_hci] = mars2earth_traj(tl_min,ta_min,mu_Sun);
+[min_energy_v_inf,min_energy_c3,r1_mars_hci,v1_mars_hci,r2_earth_hci,v2_earth_hci] = mars2earth_traj(tl_min,ta_min,mu_Sun);
+title('Minimum energy trajectory')

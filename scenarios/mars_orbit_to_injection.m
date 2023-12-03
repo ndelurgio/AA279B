@@ -137,7 +137,7 @@ legend('Delta-V','C3','Location','northwest')
 % title(['Time of arrival: ',datestr(datetime(date_arr,'ConvertFrom','juliandate'))])
 
 %% Map minimum delta-V trajectory 
-[min_dv_v_inf,min_dv_c3] = mars2earth_traj(tl_min_dv,ta_min_dv,mu_Sun);
+[min_dv_v_inf,min_dv_c3,r1_mars_hci,v1_mars_hci,r2_earth_hci,v2_earth_hci] = mars2earth_traj(tl_min_dv,ta_min_dv,mu_Sun);
 
 %% Injection velocity at a specified date
 
@@ -170,12 +170,12 @@ v_inj_vec = (R_raan*R_i*R_aop)*v_inj_pqw;
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 % Orbital period
 T = 2*pi*sqrt(sma^3/mu_Mars);
+n_steps = 50;
 tspan = linspace(0,T,n_steps);
 [t,traj] = ode113(@fode,tspan,[r0;v0],options,mu_Mars);
 r_prk = traj(:,1:3);
 
 ic = [r0;v_inj_vec];
-n_steps = 50;
 [t,traj_inj] = ode113(@fode,tspan,ic,options,mu_Mars);
 
 % Visualize orbit

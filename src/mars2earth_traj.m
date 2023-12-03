@@ -36,7 +36,6 @@ function [v_inf,c3,r1_mars_hci,v1_mars_hci,r2_earth_hci,v2_earth_hci] = mars2ear
     plot3(r_mars(:,1),r_mars(:,2),r_mars(:,3),'Color',mars_red)
     plot3(r_earth(:,1),r_earth(:,2),r_earth(:,3),'Color',earth_blue)
     legend('Sun','Mars','Earth','Trajectory')
-    title('Minimum energy trajectory')
     axis equal
     
     % Date of min. energy departure and arrival
