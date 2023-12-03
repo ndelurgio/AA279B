@@ -137,7 +137,7 @@ legend('Delta-V','C3','Location','northwest')
 % title(['Time of arrival: ',datestr(datetime(date_arr,'ConvertFrom','juliandate'))])
 
 %% Map minimum delta-V trajectory 
-[min_dv_v_inf,min_dv_c3] = mars2earth_traj(tl_min_dv,ta_min_dv,mu_Sun);
+[min_dv_v_inf,min_dv_c3,r1_mars_hci,v1_mars_hci,r2_earth_hci,v2_earth_hci] = mars2earth_traj(tl_min_dv,ta_min_dv,mu_Sun);
 
 %% Injection velocity at a specified date
 
