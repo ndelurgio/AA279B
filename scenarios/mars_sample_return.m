@@ -17,9 +17,12 @@ range_alt = 0;
 range_LLA = [range_lat_deg,range_lon_deg,range_alt];
 
 % Scheduled time of arrival and time of launch in Julian days
-load("mins.mat")
+load("scenarios/data/mins.mat")
+% load("mins.mat")
 ta = ta_min_dv; % JD
 tl = tl_min_dv;
+% ta = ta_min; % JD
+% tl = tl_min;
 
 %% CONSTANTS
 mu_earth = 3.986004415E14;
@@ -73,7 +76,7 @@ for k=1:length(tf_utc_range)
 %     range_pos_tf_j2000 = lla2eci([range_lat_deg,range_lon_deg,range_alt],datetime2vec(tf_utc));
 % end
 
-    %% New Hyperbola Design
+    % New Hyperbola Design
     [a,e,i,Om,w] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
     nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
     nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
@@ -134,7 +137,7 @@ disp('Earth re-entry angle (deg):'); disp(fpa_e)
 % [capsule_vel_ti_j2000, capsule_vel_tf_j2000, error_out] = AA279lambert_curtis(mu_earth, capsule_pos_ti_j2000, range_pos_tf_j2000, 'retro', 0, t_lambert);
 % t_sim = t_lambert + 60;
 %% FODE
-% options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
+options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 % [t_traj,capsule_traj] = ode113(...
 %     @fode,...
 %     0:dt_sec:t_lambert,...
