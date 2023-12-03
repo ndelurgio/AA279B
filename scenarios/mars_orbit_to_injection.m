@@ -82,7 +82,7 @@ yticklabels(string(ydt));
 grid on
 
 % Set launch period
-zoom2launch = true;
+zoom2launch = false;
 
 if (zoom2launch)
     period_start = date2JD('2033-01-15 00:00:00');
@@ -113,8 +113,8 @@ tl_min_dv = tl_range(i_min_dv);
 ta_min_dv = ta_range(j_min_dv);
 scatter(tl_min_dv,ta_min_dv,75,'magenta','x','LineWidth',2); % marker at min. delta-V
 %yline(ta_min_dv,'--','Color','magenta','LineWidth',1) % line at min. delta-V arrival time
-min_dv_c3 = c3s(i_min_dv,j_min_dv);
-min_dv_dv = deltaVs(i_min_dv,j_min_dv);
+% min_dv_c3 = c3s(i_min_dv,j_min_dv);
+% min_dv_dv = deltaVs(i_min_dv,j_min_dv);
 
 %legend('Delta-V','C3','Min. energy','','Min. delta-V','','Location','northwest')
 legend('Delta-V','C3','Location','northwest')
@@ -136,11 +136,13 @@ legend('Delta-V','C3','Location','northwest')
 % xlim([min(tl_range),max(tl_range)])
 % title(['Time of arrival: ',datestr(datetime(date_arr,'ConvertFrom','juliandate'))])
 
+%% Map minimum delta-V trajectory 
+[min_dv_v_inf,min_dv_c3] = mars2earth_traj(tl_min_dv,ta_min_dv,mu_Sun);
 
 %% Injection velocity at a specified date
 
-tl = tl_min;
-ta = ta_min;
+tl = tl_min_dv;
+ta = ta_min_dv;
 i = find(tl_range==tl); j = find(ta_range==ta);
 
 dV = deltaVs(i,j);
@@ -168,12 +170,12 @@ v_inj_vec = (R_raan*R_i*R_aop)*v_inj_pqw;
 options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 % Orbital period
 T = 2*pi*sqrt(sma^3/mu_Mars);
+tspan = linspace(0,T,n_steps);
 [t,traj] = ode113(@fode,tspan,[r0;v0],options,mu_Mars);
 r_prk = traj(:,1:3);
 
 ic = [r0;v_inj_vec];
 n_steps = 50;
-tspan = linspace(0,T,n_steps);
 [t,traj_inj] = ode113(@fode,tspan,ic,options,mu_Mars);
 
 % Visualize orbit

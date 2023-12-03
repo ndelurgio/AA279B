@@ -1,34 +1,14 @@
+% MARS SAMPLE RETURN
+% Interplanetary approach to Earth entry, descent and landing
+% ========================================================================
+%% Run Mars to Earth
 %clear
 %close all;
-%% Run Mars to Earth
 mars_to_earth_traj_design;
+
 %% CONFIGURABLE PARAMETERS
-%load("mins.mat")
-ta = ta_min; % JD
-% tl = date2JD('2033-01-01 12:00'); % JD
-tl = tl_min;
-
-dt_sec = (ta-tl)*24*3600;
-[v1_dep,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,dt_sec);
-
-% Initial Time
-% ti_utc = datetime(2028, 1, 1, 1, 1, 1);
-% t_duration = days(0.5);
-% ti_utc = datetime(ta,'ConvertFrom','juliandate') - t_duration;
-
-% Initial time = time of arrival (approximate)
-ti_utc = datetime(ta,'ConvertFrom','juliandate');
-
-% Initial Position
-earth_soi = 0.929E9;
-[~,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
-v_inf_hci = (v2_arr - v2_earth_hci)*10^3; % [m/s]
-v_inf = hci2eci(v_inf_hci')'; % excess arrival velocity in ECI expressed in Earth-centered coordinates
-u_inf = v_inf/norm(v_inf);
-
-% Landing Times - search within a 24-hour window to span range
-% tf_utc = ti_utc + t_duration;
-tf_utc_range = ti_utc + hours(1:1:24);
+% Flight path angle limit
+fpa_limit = 25; % [deg]
 
 % Landing Position: Utah test & training range
 range_lat_deg = 40.489831374;
@@ -36,23 +16,47 @@ range_lon_deg = -113.635330792;
 range_alt = 0;
 range_LLA = [range_lat_deg,range_lon_deg,range_alt];
 
+% Scheduled time of arrival and time of launch in Julian days
+load("mins.mat")
+ta = ta_min_dv; % JD
+tl = tl_min_dv;
+
 %% CONSTANTS
 mu_earth = 3.986004415E14;
+earth_soi = 0.929E9;
 dt_sec = 6;
 
 % Space Weather
 space_weather_data = aeroReadSpaceWeatherData("scenarios/data/SW-Last5Years.csv");
 
 % Capsule Config
+% Source: https://ntrs.nasa.gov/api/citations/20080023907/downloads/20080023907.pdf
 capsule = struct();
-capsule.Cd = 2.2;
-capsule.A = 3;
-capsule.m = 200;
-capsule.B = capsule.Cd * capsule.A / capsule.m;
+capsule.hca = 60; % [deg], half-cone angle of blunt body
+capsule.Cd = 2*sind(capsule.hca)^2; % drag coefficient
+capsule.A = pi*(.9/2)^2; % [m^2], frontal area
+capsule.m = 44; % [kg], mass
+capsule.B = capsule.Cd * capsule.A / capsule.m; % ballistic coefficient
 
-%% Loop through range of times of flight to find the best hyperbola and FPA
+%% Compute position at landing time and arrival velocity
+tof_sec = (ta-tl)*24*3600;
+[~,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,tof_sec);
 
+% Initial time = time of arrival (approximate)
+ti_utc = datetime(ta,'ConvertFrom','juliandate');
+
+% Initial Position
+[~,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
+v_inf_hci = (v2_arr - v2_earth_hci)*10^3; % [m/s]
+v_inf = hci2eci(v_inf_hci')'; % excess arrival velocity in ECI expressed in Earth-centered coordinates
+u_inf = v_inf/norm(v_inf);
+
+% Landing Times - search within a 24-hour window to span range
+tf_utc_range = ti_utc + hours(1:1:24);
+
+%% Loop through range of times of flight to find the best hyperbola for a desired FPA
 fpa_data = NaN(length(tf_utc_range),1);
+ve_data = NaN(length(tf_utc_range),1);
 tof_range = hours(tf_utc_range-ti_utc);
 
 for k=1:length(tf_utc_range)
@@ -86,19 +90,21 @@ for k=1:length(tf_utc_range)
     
     % Store data
     fpa_data(k) = fpa_e;
+    ve_data(k) = norm(v_e);
 
 end
 
 %% Plot angle vs. tof
-
 figure('Name','FPA vs. TOF')
+yyaxis left
 plot(tof_range,fpa_data)
-xlabel('TOF (hours)')
 ylabel('FPA (deg)')
+yyaxis right
+plot(tof_range,ve_data/10^3) % [km/s]
+xlabel('TOF (hours)')
+ylabel('Entry velocity (km/s)')
 
-%% Choose an angle
-% For now, the earliest time it hits below 25 deg
-fpa_limit = 25; % [deg]
+%% Choose an angle at the earliest time it hits below 25 deg
 idx = find(fpa_data<fpa_limit,1);
 tf_utc = tf_utc_range(idx);
 range_pos_tf_j2000 = lla2eci(range_LLA,datetime2vec(tf_utc));
@@ -116,6 +122,8 @@ t_sim = t_lambert + 60;
 
 % Flight path angle / EDL parameters
 [r_e,v_e,fpa_e] = hyperbola_edl(a,e,i,Om,w,mu_earth);
+disp('Earth entry velocity (km/s):'); disp(norm(v_e)/10^3)
+disp('Earth re-entry angle (deg):'); disp(fpa_e)
 
 
 %% MODEL
@@ -158,14 +166,16 @@ ti_shooter = tf_utc - seconds(t_duration_shooter);
     [pos_ti_shooter,capsule_vel_ti_j2000],...
     options,mu_earth,capsule,ti_shooter,space_weather_data);
 LLA_traj_shooter = eci2lla_datetime(capsule_traj_shooter(:,1:3),ti_shooter + seconds(t_traj_shooter));
-%% Plotting
+
+%% Geoglobe visualization
 uif = uifigure;
 g = geoglobe(uif,'NextPlot','add');
 geoplot3(g,LLA_traj(:,1),LLA_traj(:,2),LLA_traj(:,3),'LineWidth',1,'Color','red')
 hold(g,'on');
 geoplot3(g,LLA_traj_drag(:,1),LLA_traj_drag(:,2),LLA_traj_drag(:,3),'LineWidth',2,'Color','cyan')
 geoplot3(g,LLA_traj_shooter(:,1),LLA_traj_shooter(:,2),LLA_traj_shooter(:,3),'LineWidth',2,'Color','yellow')
-legend(["Lambert Solution (Kepler)","Kepler+Drag"])
+legend(["Lambert Solution (Kepler)","Kepler+Drag","Atmospheric shooting"])
+
 %% Hyperbolas
 [t_traj_2,capsule_traj_2] = fast_unperturbed_sim(2*t_sim,capsule_pos_ti_j2000,capsule_vel_ti_j2000,mu_earth);
 capsule_traj_plot = capsule_traj(vecnorm(capsule_traj(:,1:3),2,2) < 100000e3, :);
