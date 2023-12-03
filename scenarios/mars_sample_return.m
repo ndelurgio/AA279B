@@ -61,61 +61,9 @@ capsule.A = 3;
 capsule.m = 200;
 capsule.B = capsule.Cd * capsule.A / capsule.m;
 %% New Hyperbola Design
-theta = acos(dot(v_inf,range_pos_tf_j2000)/(norm(v_inf)*norm(range_pos_tf_j2000)));
-rt = norm(range_pos_tf_j2000);
-energy = norm(v_inf)^2/2;
-a = -mu_earth/(2*energy);
-
-e_max = 1 - rt/a;
-e_vec = 1:0.001:e_max;
-nu_vec = zeros(1,length(e_vec));
-psi_vec = zeros(1,length(e_vec));
-
-for i = 1:length(e_vec)
-    e = e_vec(i);
-    psi_vec(i) = acos(-1/e);
-    nu_vec(i) = -acos(a*(1-e^2)/(rt*e)-1/e);
-end
-tot_ang = psi_vec + nu_vec + theta;
-figure;
-hold on;
-plot(e_vec,rad2deg(nu_vec))
-plot(e_vec,rad2deg(psi_vec))
-plot(e_vec,rad2deg(tot_ang))
-plot(e_vec,rad2deg(tot_ang-pi))
-legend(["$\nu$","$\psi$","$\nu+\psi+\theta$"],"Interpreter","latex","Location","southeast")
-xlabel("Eccentricity")
-ylabel("Angle [deg]")
-
-f_ang = @(e) acos(-1/e) - acos(a*(1-e^2)/(rt*e)-1/e) + theta - pi;
-low = 1;
-high = e_max;
-while abs(high-low)/2 > 1e-9
-    c = (low+high)/2;
-    if sign(f_ang(c)) == sign(f_ang(low))
-       low = c; 
-    else
-        high = c;
-    end
-end
-e_des = (low+high)/2;
-
-x = v_inf'/norm(v_inf);
-z = cross(x,range_pos_tf_j2000')/norm(cross(x,range_pos_tf_j2000'));
-y = cross(z,x);
-C_hyp2eci = [x,y,z];
-
-rp_mag = a*(1-e_des);
-psi = acos(-1/e);
-rp_vec = [rp_mag*cos(pi-psi); rp_mag*sin(pi-psi); 0];
-vp_mag = sqrt(2*mu_earth/rp_mag-mu_earth/a);
-vp_vec = cross(rp_vec/norm(rp_vec),[0;0;1])*vp_mag;
-capsule_pos_tp_j2000 = (C_hyp2eci*rp_vec)';
-capsule_vel_tp_j2000 = (C_hyp2eci*vp_vec)';
-
-nuf = -acos(a*(1-e_des^2)/(rt*e_des)-1/e_des);
-nui = -acos(a*(1-e_des^2)/(earth_soi*e_des)-1/e_des);
-[a,e,i,Om,w,~,~,~,~] = rv2orb(capsule_pos_tp_j2000', capsule_vel_tp_j2000', mu_earth);
+[a,e,i,Om,w] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
+nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
+nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
 [capsule_pos_ti_j2000, capsule_vel_ti_j2000] = orb2rv(a*(1-e^2)/1000,e,i,Om,w,nui);
 capsule_pos_ti_j2000 = capsule_pos_ti_j2000'*1000;
 capsule_vel_ti_j2000 = capsule_vel_ti_j2000'*1000;
