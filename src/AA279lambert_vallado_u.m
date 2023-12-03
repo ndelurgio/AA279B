@@ -59,7 +59,9 @@
 %function [vo,v,errorl] = lambertu ( ro,r, dm, nrev, dtsec,fid )
 % Following line added by Barrows 4/2015 (function renamed; v1_out, v2_out, mu, r1_in, and r2_in added; vo, v, ro, r, and fid removed)
 function [v1_out,v2_out,errorl] = AA279lambert_vallado_u ( mu, r1_in,r2_in, dm, nrev, dtsec )
-
+r1_in = r1_in/1000;
+r2_in = r2_in/1000;
+mu = mu/1E9;
 % -------------------------  implementation   -------------------------
 % Following line commented out by Barrows 1/2014
 %        constmath;
@@ -71,7 +73,7 @@ small = 0.00001; % can affect cases where znew is multiples of 2pi^2
 % Following line commented out by Barrows 4/2015 (interplanetary problems were taking 40-60 loops to converge)
 %       numiter= 40;
 % Following line added by Barrows 4/2015
-        numiter= 500;
+        numiter= 5000;
         errorl  = '      ok';
         psinew = 0.0;
 
@@ -222,8 +224,8 @@ small = 0.00001; % can affect cases where znew is multiples of 2pi^2
        end;
           
 % Following 2 lines added by Barrows 1/2014
-v1_out = vo';
-v2_out = v';
+v1_out = vo'*1000;
+v2_out = v'*1000;
 
 % Following line added by Barrows 4/2015 to allow addition of subfunctions
 end % terminates MATLAB function
