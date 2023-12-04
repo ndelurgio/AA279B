@@ -43,6 +43,8 @@ capsule.B = capsule.Cd * capsule.A / capsule.m; % ballistic coefficient
 
 %% Compute position at landing time and arrival velocity
 tof_sec = (ta-tl)*24*3600;
+r2_earth_hci = planet_ephemeris_hci(ta,'Earth');
+r1_mars_hci = planet_ephemeris_hci(tl,'Mars');
 [~,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,tof_sec);
 
 % Initial time = time of arrival (approximate)
@@ -55,11 +57,12 @@ v_inf = hci2eci(v_inf_hci')'; % excess arrival velocity in ECI expressed in Eart
 u_inf = v_inf/norm(v_inf);
 
 % Landing Times - search within a 24-hour window to span range
-tf_utc_range = ti_utc + hours(1:1:24);
+tf_utc_range = ti_utc + hours(1:0.1:24);
 
 %% Loop through range of times of flight to find the best hyperbola for a desired FPA
 fpa_data = NaN(length(tf_utc_range),1);
 ve_data = NaN(length(tf_utc_range),1);
+theta_data = NaN(length(tf_utc_range),1);
 tof_range = hours(tf_utc_range-ti_utc);
 
 for k=1:length(tf_utc_range)
@@ -77,29 +80,32 @@ for k=1:length(tf_utc_range)
 % end
 
     % New Hyperbola Design
-    [a,e,i,Om,w] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
-    nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
-    nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
-    [capsule_pos_ti_j2000, capsule_vel_ti_j2000] = orb2rv(a*(1-e^2)/1000,e,i,Om,w,nui);
-    capsule_pos_ti_j2000 = capsule_pos_ti_j2000'*1000;
-    capsule_vel_ti_j2000 = capsule_vel_ti_j2000'*1000;
+    [a,e,i,Om,w,converge] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
+    if converge
+        theta_data(k) = theta;
+        nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
+        nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
+        [capsule_pos_ti_j2000, capsule_vel_ti_j2000] = orb2rv(a*(1-e^2)/1000,e,i,Om,w,nui);
+        capsule_pos_ti_j2000 = capsule_pos_ti_j2000'*1000;
+        capsule_vel_ti_j2000 = capsule_vel_ti_j2000'*1000;
+        
+        n = sqrt(mu_earth/abs(a)^3);
+        t_lambert = (nu2M_hyp(nuf,e) - nu2M_hyp(nui,e))/n;
+        t_sim = t_lambert + 60;
     
-    n = sqrt(mu_earth/abs(a)^3);
-    t_lambert = (nu2M_hyp(nuf,e) - nu2M_hyp(nui,e))/n;
-    t_sim = t_lambert + 60;
-
-    % Design for flight path angle
-    [r_e,v_e,fpa_e] = hyperbola_edl(a,e,i,Om,w,mu_earth);
-    
-    % Store data
-    fpa_data(k) = fpa_e;
-    ve_data(k) = norm(v_e);
-
+        % Design for flight path angle
+        [r_e,v_e,fpa_e] = hyperbola_edl(a,e,i,Om,w,mu_earth);
+        
+        % Store data
+        fpa_data(k) = fpa_e;
+        ve_data(k) = norm(v_e);
+    end
 end
 
 % Plot angle vs. tof
 figure('Name','FPA vs. TOF')
 yyaxis left
+hold on;
 plot(tof_range,fpa_data)
 ylabel('FPA (deg)')
 yyaxis right

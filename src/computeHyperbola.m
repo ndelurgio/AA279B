@@ -1,4 +1,4 @@
-function [a,e,i,Om,w] = computeHyperbola(r_target,v_inf,mu)
+function [a,e,i,Om,w,converge] = computeHyperbola(r_target,v_inf,mu)
 theta = acos(dot(v_inf,r_target)/(norm(v_inf)*norm(r_target)));
 rt = norm(r_target);
 energy = norm(v_inf)^2/2;
@@ -17,6 +17,15 @@ while abs(high-low)/2 > 1e-9
     end
 end
 e_des = (low+high)/2;
+if abs(f_ang(e_des)) > 0.001
+    converge = false;
+else
+    converge = true;
+end
+% disp(f_ang(e_des))
+% if abs(f_ang(e_des)) > 0.001
+%     disp("")
+% end
 
 x = v_inf'/norm(v_inf);
 z = cross(x,r_target')/norm(cross(x,r_target'));
