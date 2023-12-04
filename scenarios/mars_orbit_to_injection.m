@@ -56,10 +56,10 @@ end
 %% Plot contours
 figure('Name','Delta-V porkchop plot')
 [x,y] = meshgrid(tl_range,ta_range);
-dv_lvls = [0:.2:4]; %[0:.2:4,5:2:40];
+dv_lvls = [0:1:10]; %[0:.2:4,5:2:40];
 [dv_cont,dvh_cont] = contour(x,y,deltaVs',dv_lvls,'ShowText',true,"FaceAlpha",0.3,'Color','b'); hold on;
 clabel(dv_cont,dvh_cont,dv_lvls,'Color','b');
-c3_lvls = 0:1:10;
+c3_lvls = 0:1:20;
 teal = [20,180,180]/255;
 [c3_cont,c3h_cont] = contour(x,y,c3s',c3_lvls,'ShowText',true,"FaceAlpha",0.3,'Color',teal);
 clabel(c3_cont,c3h_cont,c3_lvls,'Color',teal);
