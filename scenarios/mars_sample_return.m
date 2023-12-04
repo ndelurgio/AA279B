@@ -4,7 +4,7 @@
 %% Run Mars to Earth
 %clear
 %close all;
-mars_to_earth_traj_design;
+%mars_to_earth_traj_design;
 
 %% CONFIGURABLE PARAMETERS
 % Flight path angle limit
@@ -43,26 +43,25 @@ capsule.B = capsule.Cd * capsule.A / capsule.m; % ballistic coefficient
 
 %% Compute position at landing time and arrival velocity
 tof_sec = (ta-tl)*24*3600;
-r2_earth_hci = planet_ephemeris_hci(ta,'Earth');
-r1_mars_hci = planet_ephemeris_hci(tl,'Mars');
+[r1_mars_hci,v1_mars_hci] = planet_ephemeris_hci(tl,'Mars');
+[r2_earth_hci,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
 [~,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,tof_sec);
 
 % Initial time = time of arrival (approximate)
 ti_utc = datetime(ta,'ConvertFrom','juliandate');
 
 % Initial Position
-[~,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
 v_inf_hci = (v2_arr - v2_earth_hci)*10^3; % [m/s]
 v_inf = hci2eci(v_inf_hci')'; % excess arrival velocity in ECI expressed in Earth-centered coordinates
 u_inf = v_inf/norm(v_inf);
 
 % Landing Times - search within a 24-hour window to span range
-tf_utc_range = ti_utc + hours(1:0.1:24);
+tf_utc_range = ti_utc + hours(.1:0.1:24);
 
 %% Loop through range of times of flight to find the best hyperbola for a desired FPA
 fpa_data = NaN(length(tf_utc_range),1);
 ve_data = NaN(length(tf_utc_range),1);
-theta_data = NaN(length(tf_utc_range),1);
+aer_data = NaN(length(tf_utc_range),3);
 tof_range = hours(tf_utc_range-ti_utc);
 
 for k=1:length(tf_utc_range)
@@ -82,7 +81,6 @@ for k=1:length(tf_utc_range)
     % New Hyperbola Design
     [a,e,i,Om,w,converge] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
     if converge
-        theta_data(k) = theta;
         nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
         nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
         [capsule_pos_ti_j2000, capsule_vel_ti_j2000] = orb2rv(a*(1-e^2)/1000,e,i,Om,w,nui);
@@ -99,19 +97,21 @@ for k=1:length(tf_utc_range)
         % Store data
         fpa_data(k) = fpa_e;
         ve_data(k) = norm(v_e);
+        aer_data(k,:) = eci2aer(r_e',datetime2vec(tf_utc),range_LLA); % compute azimuth, elevation, range from landing site
     end
 end
 
 % Plot angle vs. tof
-figure('Name','FPA vs. TOF')
+figure('Name','FPA vs. TOF'); hold on
 yyaxis left
-hold on;
 plot(tof_range,fpa_data)
-ylabel('FPA (deg)')
+plot(tof_range,aer_data(:,1))
+ylabel('Angle (deg)')
 yyaxis right
 plot(tof_range,ve_data/10^3) % [km/s]
 xlabel('TOF (hours)')
 ylabel('Entry velocity (km/s)')
+legend('FPA','Azimuth','Velocity')
 
 %% Choose an angle at the earliest time it hits below 25 deg
 idx = find(fpa_data<fpa_limit,1);
@@ -183,7 +183,6 @@ geoplot3(g,LLA_traj(:,1),LLA_traj(:,2),LLA_traj(:,3),'LineWidth',1,'Color','red'
 hold(g,'on');
 geoplot3(g,LLA_traj_drag(:,1),LLA_traj_drag(:,2),LLA_traj_drag(:,3),'LineWidth',2,'Color','cyan')
 geoplot3(g,LLA_traj_shooter(:,1),LLA_traj_shooter(:,2),LLA_traj_shooter(:,3),'LineWidth',2,'Color','yellow')
-legend(["Lambert Solution (Kepler)","Kepler+Drag","Atmospheric shooting"])
 
 %% Hyperbolas
 [t_traj_2,capsule_traj_2] = fast_unperturbed_sim(2*t_sim,capsule_pos_ti_j2000,capsule_vel_ti_j2000,mu_earth);
