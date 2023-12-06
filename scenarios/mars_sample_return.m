@@ -82,7 +82,7 @@ for k=1:length(tf_utc_range)
     % New Hyperbola Design
     [a,e,i,Om,w,converge] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
     if converge
-        theta_data(k) = theta;
+        % theta_data(k) = theta;
         nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
         nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
         [capsule_pos_ti_j2000, capsule_vel_ti_j2000] = orb2rv(a*(1-e^2)/1000,e,i,Om,w,nui);
