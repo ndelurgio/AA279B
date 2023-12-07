@@ -1,4 +1,4 @@
-function [a,e,i,Om,w,converge] = computeHyperbola(r_target,v_inf,mu)
+function [a,e,i,Om,w,converge,C_hyp2eci] = computeHyperbola(r_target,v_inf,mu)
 theta = acos(dot(v_inf,r_target)/(norm(v_inf)*norm(r_target)));
 rt = norm(r_target);
 energy = norm(v_inf)^2/2;

@@ -1,6 +1,7 @@
 function [v_inf,c3,r1_mars_hci,v1_mars_hci,r2_earth_hci,v2_earth_hci] = mars2earth_traj(tl,ta,mu_Sun)
 % Computes the v_inf, c3 of an interplanetary trajectory for given launch
 % and arrival dates and produces a heliocentric plot
+    AU = 1.496e8;
     dt_sec = (ta-tl)*24*3600;
     [r1_mars_hci,v1_mars_hci] = planet_ephemeris_hci(tl,'Mars');
     [r2_earth_hci,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
@@ -30,11 +31,12 @@ function [v_inf,c3,r1_mars_hci,v1_mars_hci,r2_earth_hci,v2_earth_hci] = mars2ear
     mars_red = [252,80,3]/255;
     
     figure('Name','Trajectory'); visualize_heliocentric_3d()
-    scatter3(r1_mars_hci(1),r1_mars_hci(2),r1_mars_hci(3),36,mars_red,'filled','Marker','o')
-    scatter3(r2_earth_hci(1),r2_earth_hci(2),r2_earth_hci(3),36,earth_blue,'filled','Marker','o')
-    plot3(traj(:,1),traj(:,2),traj(:,3))
-    plot3(r_mars(:,1),r_mars(:,2),r_mars(:,3),'Color',mars_red)
-    plot3(r_earth(:,1),r_earth(:,2),r_earth(:,3),'Color',earth_blue)
+    scatter3(r1_mars_hci(1)/AU,r1_mars_hci(2)/AU,r1_mars_hci(3)/AU,36,mars_red,'filled','Marker','o')
+    scatter3(r2_earth_hci(1)/AU,r2_earth_hci(2)/AU,r2_earth_hci(3)/AU,36,earth_blue,'filled','Marker','o')
+    plot3(traj(:,1)/AU,traj(:,2)/AU,traj(:,3)/AU)
+    plot3(r_mars(:,1)/AU,r_mars(:,2)/AU,r_mars(:,3)/AU,'Color',mars_red)
+    plot3(r_earth(:,1)/AU,r_earth(:,2)/AU,r_earth(:,3)/AU,'Color',earth_blue)
+  
     legend('Sun','Mars','Earth','Trajectory')
     axis equal
     

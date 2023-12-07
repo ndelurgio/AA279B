@@ -4,14 +4,14 @@
 %% Run Mars to Earth
 %clear
 %close all;
-mars_to_earth_traj_design;
+%mars_to_earth_traj_design;
 
 %% CONFIGURABLE PARAMETERS
 % Flight path angle limit
 fpa_limit = 25; % [deg]
 
 % Landing Position: Utah test & training range
-range_lat_deg = 40.489831374;
+range_lat_deg = 40.489831374;   
 range_lon_deg = -113.635330792; 
 range_alt = 0;
 range_LLA = [range_lat_deg,range_lon_deg,range_alt];
@@ -43,26 +43,25 @@ capsule.B = capsule.Cd * capsule.A / capsule.m; % ballistic coefficient
 
 %% Compute position at landing time and arrival velocity
 tof_sec = (ta-tl)*24*3600;
-r2_earth_hci = planet_ephemeris_hci(ta,'Earth');
-r1_mars_hci = planet_ephemeris_hci(tl,'Mars');
+[r1_mars_hci,v1_mars_hci] = planet_ephemeris_hci(tl,'Mars');
+[r2_earth_hci,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
 [~,v2_arr] = AA279lambert_curtis(mu_Sun,r1_mars_hci,r2_earth_hci,'pro',nrev,tof_sec);
 
 % Initial time = time of arrival (approximate)
 ti_utc = datetime(ta,'ConvertFrom','juliandate');
 
 % Initial Position
-[~,v2_earth_hci] = planet_ephemeris_hci(ta,'Earth'); % arrival
 v_inf_hci = (v2_arr - v2_earth_hci)*10^3; % [m/s]
 v_inf = hci2eci(v_inf_hci')'; % excess arrival velocity in ECI expressed in Earth-centered coordinates
 u_inf = v_inf/norm(v_inf);
 
 % Landing Times - search within a 24-hour window to span range
-tf_utc_range = ti_utc + hours(1:0.1:24);
+tf_utc_range = ti_utc + hours(.1:0.1:24);
 
 %% Loop through range of times of flight to find the best hyperbola for a desired FPA
 fpa_data = NaN(length(tf_utc_range),1);
 ve_data = NaN(length(tf_utc_range),1);
-theta_data = NaN(length(tf_utc_range),1);
+aer_data = NaN(length(tf_utc_range),3);
 tof_range = hours(tf_utc_range-ti_utc);
 
 for k=1:length(tf_utc_range)
@@ -82,7 +81,6 @@ for k=1:length(tf_utc_range)
     % New Hyperbola Design
     [a,e,i,Om,w,converge] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
     if converge
-        % theta_data(k) = theta;
         nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
         nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
         [capsule_pos_ti_j2000, capsule_vel_ti_j2000] = orb2rv(a*(1-e^2)/1000,e,i,Om,w,nui);
@@ -99,26 +97,51 @@ for k=1:length(tf_utc_range)
         % Store data
         fpa_data(k) = fpa_e;
         ve_data(k) = norm(v_e);
+        aer_data(k,:) = eci2aer(r_e',datetime2vec(tf_utc),range_LLA); % compute azimuth, elevation, range from landing site
     end
 end
 
 % Plot angle vs. tof
-figure('Name','FPA vs. TOF')
+% figure('Name','FPA vs. TOF'); hold on
+% yyaxis left
+% plot(tof_range,fpa_data)
+% ylabel('Flight Path Angle [deg]')
+% yyaxis right
+% plot(tof_range,aer_data(:,1))
+% xlabel('Hours Past ' + string(ti_utc))
+% ylabel('Entry Azimuth Angle [deg]')
+% plot(tof_range,ve_data/10^3) % [km/s]
+% legend('FPA','Azimuth','Velocity')
+figure('Name', 'FPA vs. TOF'); 
+hold on
+% Your existing plots
 yyaxis left
-hold on;
-plot(tof_range,fpa_data)
-ylabel('FPA (deg)')
+plot(tof_range, fpa_data)
+ylabel('Flight Path Angle [deg]')
 yyaxis right
-plot(tof_range,ve_data/10^3) % [km/s]
-xlabel('TOF (hours)')
-ylabel('Entry velocity (km/s)')
+plot(tof_range, aer_data(:, 1))
+xlabel('Hours Past ' + string(ti_utc))
+ylabel('Entry Azimuth Angle [deg]')
+% Identify NaN regions in your data
+nan_regions = isnan(fpa_data) | isnan(aer_data(:, 1));
+% Fill NaN regions with a red transparent box
+for i = 1:length(nan_regions)
+    if nan_regions(i)
+        x = [tof_range(i), tof_range(i+1), tof_range(i+1), tof_range(i)];
+        y = ylim; % Use the y-axis limits of the plot
+        patch(x, y([1 1 2 2]), 'r', 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+        % text(mean(x), mean(y), 'Infeasible', 'HorizontalAlignment', 'center');
+    end
+end
+annotation("textbox", [0.3617 0.4929 0.1579 0.07381], "String", "Infeasible", "HorizontalAlignment", "center")
+hold off
 
 %% Choose an angle at the earliest time it hits below 25 deg
 idx = find(fpa_data<fpa_limit,1);
 tf_utc = tf_utc_range(idx);
 range_pos_tf_j2000 = lla2eci(range_LLA,datetime2vec(tf_utc));
 % Design hyperbola
-[a,e,i,Om,w] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
+[a,e,i,Om,w,~,C_hyp2eci] = computeHyperbola(range_pos_tf_j2000,v_inf,mu_earth);
 nuf = -acos(a*(1-e^2)/(norm(range_pos_tf_j2000)*e)-1/e);
 nui = -acos(a*(1-e^2)/(earth_soi*e)-1/e);
 [capsule_pos_ti_j2000, capsule_vel_ti_j2000] = orb2rv(a*(1-e^2)/1000,e,i,Om,w,nui);
@@ -154,6 +177,45 @@ options = odeset('RelTol', 1e-6, 'AbsTol', 1e-9);
 [t_traj,capsule_traj] = fast_unperturbed_sim(t_sim,capsule_pos_ti_j2000,capsule_vel_ti_j2000,mu_earth);
 LLA_traj = eci2lla_datetime(capsule_traj(:,1:3),tf_utc - seconds(t_lambert) + seconds(t_traj));
 
+%%
+[~,capsule_traj_2] = fast_unperturbed_sim(t_sim,capsule_traj(end,1:3),capsule_traj(end,4:6),mu_earth);
+% capsule_traj_hyp_plot = capsule_traj_hyp(vecnorm(capsule_traj_hyp(:,1:3),2,2) < 10000e3 + 6378e3, :);
+capsule_traj_full = [capsule_traj; capsule_traj_2];
+capsule_traj_hyp = zeros(length(capsule_traj_full(:,1)),6);
+for i = 1:length(capsule_traj_full)
+    capsule_traj_hyp(i,1:3) = (C_hyp2eci'*capsule_traj_full(i,1:3)')';
+    capsule_traj_hyp(i,4:6) = (C_hyp2eci'*capsule_traj_full(i,4:6)')';
+end
+
+figure;
+hold on;
+
+% Plot trajectory
+plot(capsule_traj_hyp(1:round(end/2), 2)/1000, capsule_traj_hyp(1:round(end/2), 1)/1000,'-b')
+plot(capsule_traj_hyp(round(end/2):end, 2)/1000, capsule_traj_hyp(round(end/2):end, 1)/1000,'--b')
+range_pos_tf_hyp = C_hyp2eci'*range_pos_tf_j2000';
+scatter(range_pos_tf_hyp(2)/1000,range_pos_tf_hyp(1)/1000,'red','filled')
+set(gca, 'XDir', 'reverse')
+xlabel('Y [km]')
+ylabel('X [km]')
+grid on;
+axis equal;
+xlim([-32007 22699])
+ylim([-36150 18556])
+
+% Add Earth representation
+earth_radius = 6371; % Earth radius in km
+earth_center_x = 0; % X-coordinate of Earth center
+earth_center_y = 0; % Y-coordinate of Earth center
+earth_color = [0.7 0.9 1, 0.8]; % RGB color for Earth (green)
+
+% Draw Earth as a circle
+rectangle('Position', [earth_center_x - earth_radius, earth_center_y - earth_radius, 2 * earth_radius, 2 * earth_radius], ...
+    'Curvature', [1, 1], 'FaceColor', earth_color, 'EdgeColor', 'none');
+
+legend('Trajectory', 'Post-EDL Hyperbola','Target','Earth', 'Location', 'northwest');
+hold off;
+
 %% With Drag
 dt_drag = 6;
 [t_traj_drag,capsule_traj_drag] = fast_drag_sim(t_sim,capsule_pos_ti_j2000,capsule_vel_ti_j2000,mu_earth,capsule,tf_utc - seconds(t_lambert),space_weather_data,options);
@@ -176,6 +238,41 @@ ti_shooter = tf_utc - seconds(t_duration_shooter);
     options,mu_earth,capsule,ti_shooter,space_weather_data);
 LLA_traj_shooter = eci2lla_datetime(capsule_traj_shooter(:,1:3),ti_shooter + seconds(t_traj_shooter));
 
+%%
+% ecef_traj_shooter = lla2ecef(LLA_traj_shooter);
+enu_traj_shooter = lla2enu(LLA_traj_shooter,range_LLA,'flat');
+capsule_traj_shooter_hyp = zeros(length(capsule_traj_shooter(:,1)),6);
+% for i = 1:length(capsule_traj_shooter)
+%     capsule_traj_shooter_hyp(i,1:3) = (C_hyp2eci'*capsule_traj_shooter(i,1:3)')';
+%     capsule_traj_shooter_hyp(i,4:6) = (C_hyp2eci'*capsule_traj_shooter(i,4:6)')';
+% end
+% capsule_traj_shooter_hyp = capsule_traj_shooter_hyp(capsule_traj_shooter_hyp(:,2)<100e3+6378e3,:)
+enu_traj_shooter = enu_traj_shooter(enu_traj_shooter(:,3)<100e3,:);
+downrange = -40:200:200;
+alt = 0:100;
+dens_mat = zeros(length(alt),length(downrange));
+for i = 1:length(alt)
+    [f107average,f107daily,magneticIndex] = fluxSolarAndGeomagnetic(...
+    ti_utc.Year,day(ti_utc,'dayofyear'),...
+    ti_utc.Second,space_weather_data);
+    [~, rho] = atmosnrlmsise00(alt(i)*1000,range_lat_deg,range_lon_deg,...
+        ti_utc.Year,day(ti_utc,'dayofyear'),ti_utc.Second,...
+        f107average,f107daily,magneticIndex);
+    dens_mat(i,:) = rho(6);
+end
+figure;
+hold on;
+contourf(downrange,alt,dens_mat,[0.0, 0.01, 0.1, 0.5, 1],"ShowText",true,"LabelFormat","%0.2f kg/m^3","FaceAlpha",1,'LabelColor','w')
+colormap(abyss)
+plot(vecnorm(enu_traj_shooter(:,1:2),2,2)/1000,enu_traj_shooter(:,3)/1000,'*-','MarkerSize',10,'Color','yellow','LineWidth',2);
+set(gca, 'XDir', 'reverse')
+xlabel("Downrange [km]")
+ylabel("Altitude [km]")
+xlim([-11.8 99.8])
+ylim([-0.2 60])
+axis equal;
+grid on;
+
 %% Geoglobe visualization
 uif = uifigure;
 g = geoglobe(uif,'NextPlot','add');
@@ -183,7 +280,6 @@ geoplot3(g,LLA_traj(:,1),LLA_traj(:,2),LLA_traj(:,3),'LineWidth',1,'Color','red'
 hold(g,'on');
 geoplot3(g,LLA_traj_drag(:,1),LLA_traj_drag(:,2),LLA_traj_drag(:,3),'LineWidth',2,'Color','cyan')
 geoplot3(g,LLA_traj_shooter(:,1),LLA_traj_shooter(:,2),LLA_traj_shooter(:,3),'LineWidth',2,'Color','yellow')
-legend(["Lambert Solution (Kepler)","Kepler+Drag","Atmospheric shooting"])
 
 %% Hyperbolas
 [t_traj_2,capsule_traj_2] = fast_unperturbed_sim(2*t_sim,capsule_pos_ti_j2000,capsule_vel_ti_j2000,mu_earth);
